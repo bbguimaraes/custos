@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <getopt.h>
 #include <signal.h>
 #include <time.h>
 
@@ -13,8 +14,14 @@
 #define DATE_FMT "%Y-%m-%dT%H:%M:%S"
 #define DATE_SIZE sizeof("YYYY-MM-DDTHH:MM:SS")
 
+enum flag {
+    HELP    = 1 << 0,
+    VERBOSE = 1 << 1,
+};
+
 struct config {
     struct timespec t;
+    enum flag flags;
 };
 
 struct module {
@@ -37,6 +44,37 @@ static struct module modules[] = {{
 static void sigint_handler(int s) {
     (void)s;
     interrupted = 1;
+}
+
+static bool parse_args(int argc, char *const *argv, struct config *config) {
+    static const char *short_opts = "hv";
+    static const struct option long_opts[] = {
+        {"help", no_argument, 0, 'h'},
+        {"verbose", no_argument, 0, 'v'},
+        {0},
+    };
+    for(;;) {
+        int i = 0;
+        const int c = getopt_long(argc, argv, short_opts, long_opts, &i);
+        if(c == -1)
+            break;
+        switch(c) {
+        case 'h': config->flags |= HELP; break;
+        case 'v': config->flags |= VERBOSE; break;
+        default: return false;
+        }
+    }
+    return true;
+}
+
+static void usage(FILE *f, const char *name) {
+    fprintf(f,
+        "Usage: %s [OPTIONS]\n"
+        "\n"
+        "Options:\n"
+        "    -h, --help             this help\n"
+        "    -v, --verbose          verbose output\n",
+        name);
 }
 
 static bool print_header(void) {
@@ -106,8 +144,12 @@ static bool update_modules(void) {
     return true;
 }
 
-int main(void) {
+int main(int argc, char *const *argv) {
     struct config config = {0};
+    if(!parse_args(argc, argv, &config))
+        return 1;
+    if(config.flags & HELP)
+        return usage(stdout, argv[0]), 0;
     if(!(init_config(&config) && init_modules()))
         return 1;
     while(!interrupted)
