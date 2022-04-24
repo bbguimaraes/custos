@@ -23,7 +23,7 @@ enum flag {
 
 struct config {
     struct timespec t;
-    size_t count;
+    size_t count, interval;
     enum flag flags;
 };
 
@@ -50,11 +50,12 @@ static void sigint_handler(int s) {
 }
 
 static bool parse_args(int argc, char *const *argv, struct config *config) {
-    static const char *short_opts = "hvn:";
+    static const char *short_opts = "hvi:n:";
     static const struct option long_opts[] = {
         {"help", no_argument, 0, 'h'},
         {"verbose", no_argument, 0, 'v'},
         {"count", required_argument, 0, 'n'},
+        {"interval", required_argument, 0, 'i'},
         {0},
     };
     for(;;) {
@@ -69,6 +70,12 @@ static bool parse_args(int argc, char *const *argv, struct config *config) {
             if(!parse_ulong_arg("count", SIZE_MAX, optarg, &config->count))
                 return false;
             break;
+        case 'i': {
+            const size_t max = (time_t)((size_t)-1 / 2);
+            if(!parse_ulong_arg("interval", max, optarg, &config->interval))
+                return false;
+            break;
+        }
         default: return false;
         }
     }
@@ -102,7 +109,7 @@ static bool print_header(void) {
 
 static bool sleep(struct config *config) {
     struct timespec *t = &config->t;
-    ++t->tv_sec;
+    t->tv_sec = t->tv_sec + (time_t)config->interval;
     while(clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, t, NULL) == -1)
         if(errno != EINTR)
             return LOG_ERRNO("clock_nanosleep"), false;
@@ -154,7 +161,9 @@ static bool update_modules(void) {
 }
 
 int main(int argc, char *const *argv) {
-    struct config config = {0};
+    struct config config = {
+        .interval = 1,
+    };
     if(!parse_args(argc, argv, &config))
         return 1;
     if(config.flags & HELP)
