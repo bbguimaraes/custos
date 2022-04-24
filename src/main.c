@@ -12,6 +12,7 @@
 
 #include "term.h"
 #include "test.h"
+#include "thermal.h"
 #include "utils.h"
 
 #define DATE_FMT "%Y-%m-%dT%H:%M:%S"
@@ -45,6 +46,11 @@ static struct module modules[] = {{
     .init = test_init,
     .destroy = test_destroy,
     .update = test_update,
+}, {
+    .name = "thermal",
+    .init = thermal_init,
+    .destroy = thermal_destroy,
+    .update = thermal_update,
 }};
 
 static void sigint_handler(int s) {

@@ -4,7 +4,7 @@ workspace "custos"
     language "C"
     cdialect "C11"
     defines {
-        "_POSIX_C_SOURCE=200112L",
+        "_POSIX_C_SOURCE=200809L",
     }
     warnings "Extra"
 

@@ -27,6 +27,10 @@ static inline void vlog_errno(
     const char *restrict file, int line, const char *restrict fn,
     const char *restrict fmt, va_list args);
 
+static inline FILE *open_file(const char *path, const char *mode);
+static inline bool close_file(FILE *f, const char *path);
+static inline bool rewind_and_scan(FILE *f, const char *format, void *ret);
+
 /**
  * Reads an unsigned integer value from a command-line argument.
  * \param name Argument name, displayed in error messages.
@@ -107,6 +111,32 @@ inline char *find_str(const char *const *v, const char *s) {
         if(strcmp(*v, s) == 0)
             return (char*)s;
     return NULL;
+}
+
+inline FILE *open_file(const char *path, const char *mode) {
+    FILE *const ret = fopen(path, mode);
+    if(!ret)
+        LOG_ERRNO("fopen(%s)", path);
+    return ret;
+}
+
+inline bool close_file(FILE *f, const char *path) {
+    if(fclose(f)) {
+        LOG_ERRNO("fclose(%s)", path);
+        return false;
+    }
+    return true;
+}
+
+inline bool rewind_and_scan(FILE *f, const char *format, void *p) {
+    if(fflush(f) == EOF)
+        return LOG_ERRNO("fflush"), false;
+    rewind(f);
+    if(fscanf(f, format, p) != 1) {
+        LOG_ERRNO("invalid value read from file, error");
+        return false;
+    }
+    return true;
 }
 
 #endif
