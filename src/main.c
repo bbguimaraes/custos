@@ -27,6 +27,7 @@ struct config {
     struct timespec t;
     size_t count, interval;
     enum flag flags;
+    char *enabled_modules;
 };
 
 struct module {
@@ -52,13 +53,14 @@ static void sigint_handler(int s) {
 }
 
 static bool parse_args(int argc, char *const *argv, struct config *config) {
-    static const char *short_opts = "hvci:n:";
+    static const char *short_opts = "hvci:n:m:";
     static const struct option long_opts[] = {
         {"help", no_argument, 0, 'h'},
         {"verbose", no_argument, 0, 'v'},
         {"clear", no_argument, 0, 'c'},
         {"count", required_argument, 0, 'n'},
         {"interval", required_argument, 0, 'i'},
+        {"modules", required_argument, 0, 'm' },
         {0},
     };
     for(;;) {
@@ -80,6 +82,7 @@ static bool parse_args(int argc, char *const *argv, struct config *config) {
                 return false;
             break;
         }
+        case 'm': config->enabled_modules = optarg; break;
         default: return false;
         }
     }
@@ -94,7 +97,9 @@ static void usage(FILE *f, const char *name) {
         "    -h, --help             this help\n"
         "    -v, --verbose          verbose output\n"
         "    -c, --clear            clear screen between updates\n"
-        "    -n N, --count N        exit after N updates\n",
+        "    -n N, --count N        exit after N updates\n"
+        "    --modules LIST...      load only modules in LIST, a\n"
+        "                           comma-separated list of names\n",
         name);
 }
 
@@ -135,21 +140,60 @@ static bool init_config(struct config *c) {
     return true;
 }
 
-static bool init_modules(void) {
+static char **parse_enabled(char *s);
+
+static bool init_modules(struct config *config) {
+    bool ret = false;
+    char **enabled = NULL;
+    if(config->enabled_modules)
+        if(!(enabled = parse_enabled(config->enabled_modules)))
+            goto end;
     for(size_t i = 0; i != ARRAY_SIZE(modules); ++i) {
         struct module *const m = modules + i;
+        if(enabled && !find_str((const char *const*)enabled, m->name))
+            continue;
         if(!(m->data = m->init())) {
             LOG_ERR("failed to initialize module \"%s\"\n", m->name);
-            return false;
+            goto end;
         }
     }
-    return true;
+    ret = true;
+end:
+    free(enabled);
+    return ret;
+}
+
+static char **parse_enabled(char *s) {
+    char **ret = NULL;
+    size_t n = 0;
+    for(const char *p = s; *p; ++p)
+        n += *p == ',';
+    if(!(ret = calloc(n + 2, sizeof(*ret)))) {
+        LOG_ERRNO("calloc");
+        goto err;
+    }
+    char *save = NULL, *p = strtok_r(s, ",", &save);
+    if(!p) {
+        LOG_ERR("invalid module list: %s\n", s);
+        goto err;
+    }
+    size_t i = 0;
+    ret[i++] = p;
+    while((p = strtok_r(NULL, ",", &save)))
+        ret[i++] = p;
+    ret[i] = NULL;
+    return ret;
+err:
+    free(ret);
+    return NULL;
 }
 
 static bool destroy_modules(void) {
     bool ret = true;
     for(size_t i = 0; i != ARRAY_SIZE(modules); ++i) {
         struct module *const m = modules + i;
+        if(!m->data)
+            continue;
         if(!m->destroy(m->data)) {
             LOG_ERR("failed to destroy module \"%s\"\n", m->name);
             ret = false;
@@ -161,6 +205,8 @@ static bool destroy_modules(void) {
 static bool update_modules(void) {
     for(size_t i = 0; i != ARRAY_SIZE(modules); ++i) {
         struct module *const m = modules + i;
+        if(!m->data)
+            continue;
         if(!m->update(m->data)) {
             LOG_ERR("failed to update module \"%s\"\n", m->name);
             return false;
@@ -177,7 +223,7 @@ int main(int argc, char *const *argv) {
         return 1;
     if(config.flags & HELP)
         return usage(stdout, argv[0]), 0;
-    if(!(init_config(&config) && init_modules()))
+    if(!(init_config(&config) && init_modules(&config)))
         return 1;
     while(!interrupted) {
         if(!(print_header(&config) && update_modules()))

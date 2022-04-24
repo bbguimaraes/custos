@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <string.h>
 
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof(*x))
 #define LOG_ERR(...) log_err(__FILE__, __LINE__, __func__, __VA_ARGS__)
@@ -35,6 +36,13 @@ static inline void vlog_errno(
  */
 static inline bool parse_ulong_arg(
     const char *name, size_t max, const char *s, unsigned long *p);
+
+/**
+ * Finds a string in an array.
+ * \param v Null-terminated array of null-terminated strings.
+ * \param s The string, matched via `strcmp`.
+ */
+static inline char *find_str(const char *const *v, const char *s);
 
 inline void log_err(
     const char *restrict file, int line, const char *restrict fn,
@@ -92,6 +100,13 @@ inline bool parse_ulong_arg(
     }
     *p = u;
     return true;
+}
+
+inline char *find_str(const char *const *v, const char *s) {
+    for(; *v; ++v)
+        if(strcmp(*v, s) == 0)
+            return (char*)s;
+    return NULL;
 }
 
 #endif
