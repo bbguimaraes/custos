@@ -78,7 +78,7 @@ inline bool parse_ulong_arg(
     }
     if(max < u) {
         fprintf(
-            stderr, "%s: argument \"%s\" out of range: %lu < %lu\n",
+            stderr, "%s: argument \"%s\" out of range: %zu < %lu\n",
             __func__, name, max, u);
         return false;
     }
