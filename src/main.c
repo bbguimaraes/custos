@@ -10,6 +10,7 @@
 #include <signal.h>
 #include <time.h>
 
+#include "term.h"
 #include "test.h"
 #include "utils.h"
 
@@ -17,8 +18,9 @@
 #define DATE_SIZE sizeof("YYYY-MM-DDTHH:MM:SS")
 
 enum flag {
-    HELP    = 1 << 0,
-    VERBOSE = 1 << 1,
+    HELP         = 1 << 0,
+    VERBOSE      = 1 << 1,
+    CLEAR_SCREEN = 1 << 2,
 };
 
 struct config {
@@ -50,10 +52,11 @@ static void sigint_handler(int s) {
 }
 
 static bool parse_args(int argc, char *const *argv, struct config *config) {
-    static const char *short_opts = "hvi:n:";
+    static const char *short_opts = "hvci:n:";
     static const struct option long_opts[] = {
         {"help", no_argument, 0, 'h'},
         {"verbose", no_argument, 0, 'v'},
+        {"clear", no_argument, 0, 'c'},
         {"count", required_argument, 0, 'n'},
         {"interval", required_argument, 0, 'i'},
         {0},
@@ -66,6 +69,7 @@ static bool parse_args(int argc, char *const *argv, struct config *config) {
         switch(c) {
         case 'h': config->flags |= HELP; break;
         case 'v': config->flags |= VERBOSE; break;
+        case 'c': config->flags |= CLEAR_SCREEN; break;
         case 'n':
             if(!parse_ulong_arg("count", SIZE_MAX, optarg, &config->count))
                 return false;
@@ -89,11 +93,12 @@ static void usage(FILE *f, const char *name) {
         "Options:\n"
         "    -h, --help             this help\n"
         "    -v, --verbose          verbose output\n"
+        "    -c, --clear            clear screen between updates\n"
         "    -n N, --count N        exit after N updates\n",
         name);
 }
 
-static bool print_header(void) {
+static bool print_header(const struct config *config) {
     time_t t = {0};
     if(time(&t) == -1)
         return LOG_ERRNO("time"), false;
@@ -103,7 +108,11 @@ static bool print_header(void) {
     char str[DATE_SIZE] = {0};
     if(strftime(str, sizeof(str), DATE_FMT, &tm) != sizeof(str) - 1)
         return LOG_ERR("strftime failed\n"), false;
-    printf("\n%s\n\n", str);
+    if(config->flags & CLEAR_SCREEN)
+        term_clear(stdout);
+    else
+        puts("");
+    printf("%s\n\n", str);
     return true;
 }
 
@@ -171,7 +180,7 @@ int main(int argc, char *const *argv) {
     if(!(init_config(&config) && init_modules()))
         return 1;
     while(!interrupted) {
-        if(!(print_header() && update_modules()))
+        if(!(print_header(&config) && update_modules()))
             goto err;
         if(config.count && !--config.count)
             break;
