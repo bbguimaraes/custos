@@ -1,7 +1,9 @@
 #include <errno.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include <getopt.h>
@@ -21,6 +23,7 @@ enum flag {
 
 struct config {
     struct timespec t;
+    size_t count;
     enum flag flags;
 };
 
@@ -47,10 +50,11 @@ static void sigint_handler(int s) {
 }
 
 static bool parse_args(int argc, char *const *argv, struct config *config) {
-    static const char *short_opts = "hv";
+    static const char *short_opts = "hvn:";
     static const struct option long_opts[] = {
         {"help", no_argument, 0, 'h'},
         {"verbose", no_argument, 0, 'v'},
+        {"count", required_argument, 0, 'n'},
         {0},
     };
     for(;;) {
@@ -61,6 +65,10 @@ static bool parse_args(int argc, char *const *argv, struct config *config) {
         switch(c) {
         case 'h': config->flags |= HELP; break;
         case 'v': config->flags |= VERBOSE; break;
+        case 'n':
+            if(!parse_ulong_arg("count", SIZE_MAX, optarg, &config->count))
+                return false;
+            break;
         default: return false;
         }
     }
@@ -73,7 +81,8 @@ static void usage(FILE *f, const char *name) {
         "\n"
         "Options:\n"
         "    -h, --help             this help\n"
-        "    -v, --verbose          verbose output\n",
+        "    -v, --verbose          verbose output\n"
+        "    -n N, --count N        exit after N updates\n",
         name);
 }
 
@@ -152,9 +161,14 @@ int main(int argc, char *const *argv) {
         return usage(stdout, argv[0]), 0;
     if(!(init_config(&config) && init_modules()))
         return 1;
-    while(!interrupted)
-        if(!(print_header() && update_modules() && sleep(&config)))
+    while(!interrupted) {
+        if(!(print_header() && update_modules()))
             goto err;
+        if(config.count && !--config.count)
+            break;
+        if(!sleep(&config))
+            goto err;
+    }
     return !destroy_modules();
 err:
     destroy_modules();
