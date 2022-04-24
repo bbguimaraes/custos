@@ -1,5 +1,7 @@
 project "custos"
     files {
+        "load.c",
+        "load.h",
         "main.c",
         "term.h",
         "term.c",
