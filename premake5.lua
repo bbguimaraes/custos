@@ -3,7 +3,10 @@ workspace "custos"
     kind "ConsoleApp"
     language "C"
     cdialect "C11"
-    defines { "_POSIX_C_SOURCE=200112L" }
+    defines {
+        "_POSIX_C_SOURCE=200112L",
+        "_XOPEN_SOURCE",
+    }
     warnings "Extra"
 
     filter "configurations:debug"
