@@ -5,6 +5,7 @@ workspace "custos"
     cdialect "C11"
     defines {
         "_POSIX_C_SOURCE=200809L",
+        "_XOPEN_SOURCE",
     }
     warnings "Extra"
 

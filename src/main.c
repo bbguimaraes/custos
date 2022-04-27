@@ -10,6 +10,7 @@
 #include <signal.h>
 #include <time.h>
 
+#include "date.h"
 #include "load.h"
 #include "term.h"
 #include "test.h"
@@ -57,6 +58,11 @@ static struct module modules[] = {{
     .init = thermal_init,
     .destroy = thermal_destroy,
     .update = thermal_update,
+}, {
+    .name = "date",
+    .init = date_init,
+    .destroy = date_destroy,
+    .update = date_update,
 }};
 
 static void sigint_handler(int s) {
