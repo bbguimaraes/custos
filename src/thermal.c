@@ -1,5 +1,6 @@
 #include "thermal.h"
 
+#include <assert.h>
 #include <errno.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -11,11 +12,62 @@
 
 struct data {
     FILE *input;
-    char *path;
+    char *path, *label;
 };
 
+static char *label_path(const char *path);
+static char *read_label(const char *path);
+
 static bool init(struct data *d) {
-    return (d->input = open_file(d->path, "r"));
+    if(!(d->input = open_file(d->path, "r")))
+        return false;
+    char *const label = label_path(d->path);
+    if(!label)
+        return false;
+    d->label = read_label(label);
+    free(label);
+    return d->label;
+}
+
+static char *replace(const char *s, const char *repl);
+
+static char *label_path(const char *path) {
+    const char repl[] = "label";
+    static_assert(sizeof(repl) <= sizeof("input"));
+    return replace(path, repl);
+}
+
+static char *replace(const char *s, const char *repl) {
+    const char src[] = "input";
+    assert(strlen(repl) + 1 <= sizeof(repl));
+    const size_t n = strlen(s) - sizeof(src) + 1;
+    assert(strcmp(s + n, src) == 0);
+    char *const ret = strdup(s);
+    if(!ret)
+        return LOG_ERRNO("strdup"), NULL;
+    strcpy(ret + n, repl);
+    return ret;
+}
+
+static char *read_label(const char *path) {
+    FILE *const f = fopen(path, "r");
+    if(!f)
+        return LOG_ERRNO("fopen(%s)", path), NULL;
+    char buffer[1024];
+    const size_t n = fread(buffer, 1, sizeof(buffer), f);
+    if(!n) {
+        LOG_ERRNO("fread");
+        goto err;
+    }
+    if(fclose(f) == EOF)
+        return LOG_ERRNO("fclose(%s)", path), NULL;
+    enum { new_line = 1 };
+    buffer[n - new_line] = 0;
+    return strdup(buffer);
+err:
+    if(fclose(f) == EOF)
+        LOG_ERRNO("fclose(%s)", path);
+    return NULL;
 }
 
 static struct data *init_from_glob(const char *pat) {
@@ -63,6 +115,7 @@ bool thermal_destroy(void *d) {
         if(v->input && !close_file(v->input, v->path))
             ret = false;
         free(v->path);
+        free(v->label);
     }
     free(d);
     return ret;
@@ -70,12 +123,11 @@ bool thermal_destroy(void *d) {
 
 bool thermal_update(void *d) {
     puts("thermal");
-    size_t i = 0;
     for(struct data *v = d; v->input; ++v) {
         int temp = 0;
         if(!rewind_and_scan(v->input, "%d", &temp))
             return false;
-        printf("  %zu: %.1f°C\n", i++, (double)temp / 1e3);
+        printf("  %.1f°C %s\n", (double)temp / 1e3, v->label);
     }
     return true;
 }
