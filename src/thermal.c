@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <glob.h>
 #include "utils.h"
 
 struct data {
@@ -17,29 +18,41 @@ static bool init(struct data *d) {
     return (d->input = open_file(d->path, "r"));
 }
 
-void *thermal_init(void) {
-    const char *paths[] = {
-        "/sys/devices/platform/coretemp.0/hwmon/hwmon5/temp1_input",
-        "/sys/devices/platform/coretemp.0/hwmon/hwmon5/temp2_input",
-        "/sys/devices/platform/coretemp.0/hwmon/hwmon5/temp3_input",
-        "/sys/devices/platform/coretemp.0/hwmon/hwmon5/temp4_input",
-        "/sys/devices/platform/coretemp.0/hwmon/hwmon5/temp5_input",
-    };
-    struct data *v = calloc(ARRAY_SIZE(paths) + 1, sizeof(*v));
-    if(!v)
-        return LOG_ERRNO("calloc"), NULL;
-    for(size_t i = 0; i != ARRAY_SIZE(paths); ++i) {
-        if(!(v[i].path = strdup(paths[i]))) {
-            LOG_ERRNO("strdup");
-            goto err;
-        }
-        if(!init(v + i))
-            goto err;
+static struct data *init_from_glob(const char *pat) {
+    glob_t paths = {0};
+    switch(glob(pat, 0, NULL, &paths)) {
+    case GLOB_NOMATCH: LOG_ERR("glob(%s): no files found\n", pat); return NULL;
+    case GLOB_NOSPACE: LOG_ERR("glob(%s): NOSPACE\n", pat); return NULL;
+    case GLOB_ABORTED: LOG_ERR("glob(%s): ABORTED\n", pat); return NULL;
     }
+    struct data *v = calloc(paths.gl_pathc + 1, sizeof(*v));
+    if(!v) {
+        LOG_ERRNO("calloc");
+        goto e0;
+    }
+    for(size_t i = 0; i != paths.gl_pathc; ++i)
+        if(!(v[i].path = strdup(paths.gl_pathv[i]))) {
+            LOG_ERRNO("strdup");
+            goto e1;
+        }
+    globfree(&paths);
     return v;
-err:
+e1:
     thermal_destroy(v);
+e0:
+    globfree(&paths);
     return NULL;
+}
+
+void *thermal_init(void) {
+    struct data *v = init_from_glob(
+        "/sys/devices/platform/coretemp.0/hwmon/*/temp*_input");
+    if(!v)
+        return NULL;
+    for(struct data *p = v; p->path; ++p)
+        if(!init(p))
+            return thermal_destroy(v), NULL;
+    return v;
 }
 
 bool thermal_destroy(void *d) {
@@ -62,7 +75,7 @@ bool thermal_update(void *d) {
         int temp = 0;
         if(!rewind_and_scan(v->input, "%d", &temp))
             return false;
-        printf("  %zu: %.1f°C\n", i, (double)temp / 1e3);
+        printf("  %zu: %.1f°C\n", i++, (double)temp / 1e3);
     }
     return true;
 }
