@@ -10,6 +10,7 @@
 #include <signal.h>
 #include <time.h>
 
+#include "battery.h"
 #include "date.h"
 #include "load.h"
 #include "term.h"
@@ -53,6 +54,11 @@ static struct module modules[] = {{
     .init = load_init,
     .destroy = load_destroy,
     .update = load_update,
+}, {
+    .name = "battery",
+    .init = battery_init,
+    .destroy = battery_destroy,
+    .update = battery_update,
 }, {
     .name = "thermal",
     .init = thermal_init,

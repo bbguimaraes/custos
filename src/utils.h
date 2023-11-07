@@ -10,6 +10,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define CUSTOS_MAX_PATH 4096
+
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof(*x))
 #define LOG_ERR(...) log_err(__FILE__, __LINE__, __func__, __VA_ARGS__)
 #define LOG_ERRNO(...) log_errno(__FILE__, __LINE__, __func__, __VA_ARGS__)
@@ -30,6 +32,9 @@ static inline void vlog_errno(
 static inline FILE *open_file(const char *path, const char *mode);
 static inline bool close_file(FILE *f, const char *path);
 static inline bool rewind_and_scan(FILE *f, const char *format, void *ret);
+static inline bool rewind_and_read(
+    FILE *f, const char *restrict name, size_t *n, char *restrict p);
+bool join_path(char v[static CUSTOS_MAX_PATH], int n, ...);
 
 /**
  * Reads an unsigned integer value from a command-line argument.
@@ -136,6 +141,21 @@ inline bool rewind_and_scan(FILE *f, const char *format, void *p) {
         LOG_ERRNO("invalid value read from file, error");
         return false;
     }
+    return true;
+}
+
+inline bool rewind_and_read(
+    FILE *f, const char *restrict name, size_t *n, char *restrict p)
+{
+    if(fflush(f) == EOF)
+        return LOG_ERRNO("fflush"), false;
+    rewind(f);
+    const size_t r = fread(p, 1, *n, f);
+    if(ferror(f))
+        return LOG_ERRNO("fread"), false;
+    if(r == *n)
+        return LOG_ERR("%s too long: %.*s", name, *n, p), false;
+    *n = r;
     return true;
 }
 
