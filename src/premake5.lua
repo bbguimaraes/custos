@@ -1,5 +1,7 @@
 project "custos"
     files {
+        "battery.h",
+        "battery.c",
         "date.h",
         "date.c",
         "load.c",
