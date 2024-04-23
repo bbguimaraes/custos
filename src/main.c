@@ -60,6 +60,7 @@ static struct module modules[] = {{
     .update = load_update,
 }, {
     .name = "test",
+    .lua = test_lua,
     .init = test_init,
     .destroy = test_destroy,
     .update = test_update,
