@@ -13,6 +13,7 @@
 #include "battery.h"
 #include "date.h"
 #include "load.h"
+#include "mod.h"
 #include "term.h"
 #include "test.h"
 #include "thermal.h"
@@ -33,14 +34,6 @@ struct config {
     enum flag flags;
     /** bitmap which corresponds to \ref modules */
     u8 enabled_modules;
-};
-
-struct module {
-    const char *name;
-    void *data;
-    void *(*init)(void);
-    bool (*destroy)(void*);
-    bool (*update)(void*);
 };
 
 static sig_atomic_t interrupted = 0;
@@ -71,12 +64,6 @@ static struct module modules[] = {{
     .destroy = thermal_destroy,
     .update = thermal_update,
 }};
-
-int module_name_cmp(const void *lhs, const void *rhs) {
-    return strcmp(
-        ((const struct module*)lhs)->name,
-        ((const struct module*)rhs)->name);
-}
 
 static void sigint_handler(int s) {
     (void)s;
@@ -234,6 +221,11 @@ static bool update_modules(void) {
         }
     }
     return true;
+}
+
+struct module *get_modules(size_t *n) {
+    *n = ARRAY_SIZE(modules);
+    return modules;
 }
 
 int main(int argc, char *const *argv) {
