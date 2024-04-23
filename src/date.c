@@ -5,10 +5,13 @@
 
 #include <time.h>
 
+#include <lua.h>
+
 #include "utils.h"
 
 #define DATE_FMT "%Y-%m-%dT%H:%M:%S"
 #define DATE_SIZE sizeof("YYYY-MM-DDTHH:MM:SS")
+#define VAR_LUA "date.timezones"
 
 struct tz {
     long offset;
@@ -18,28 +21,48 @@ struct tz {
 static bool init_tzs(struct tz *v);
 static bool restore_tz(const char *tz);
 
-void *date_init(struct lua_State *L) {
-    (void)L;
-    const struct tz tzs[] = {
-        {.name = "P  ", .id = "US/Pacific"},
-        {.name = "E  ", .id = "US/Eastern"},
-        {.name = "BR ", .id = "America/Sao_Paulo"},
-        {.name = "UTC", .id = "UTC"},
-        {.name = "CE ", .id = "Europe/Prague"},
-    };
-    struct tz *const v = calloc(ARRAY_SIZE(tzs) + 1, sizeof(*v));
+static int set_timezones(lua_State *L) {
+    lua_setglobal(L, VAR_LUA);
+    return 0;
+}
+
+static struct tz *get_timezones(lua_State *L) {
+    if(lua_getglobal(L, VAR_LUA) == LUA_TNIL)
+        return lua_pop(L, 1), NULL;
+    lua_len(L, 1);
+    const lua_Integer n = lua_tointeger(L, -1);
+    struct tz *const v = calloc((size_t)(n + 1), sizeof(*v));
     if(!v)
-        return LOG_ERRNO("calloc"), NULL;
-    for(size_t i = 0; i != ARRAY_SIZE(tzs); ++i)
+        return lua_pop(L, 2), LOG_ERRNO("calloc"), NULL;
+    for(lua_Integer i = 0; i != n; ++i) {
+        lua_geti(L, -2, i + 1);
+        lua_geti(L, -1, 1);
+        lua_geti(L, -2, 2);
         v[i] = (struct tz){
-            .name = strdup(tzs[i].name),
-            .id = strdup(tzs[i].id),
+            .name = strdup(lua_tostring(L, -2)),
+            .id = strdup(lua_tostring(L, -1)),
         };
-    const char *const tz = getenv("TZ");
-    if(!init_tzs(v) || !restore_tz(tz)) {
-        date_destroy(v);
-        return NULL;
+        lua_pop(L, 3);
     }
+    lua_pop(L, 2);
+    return v;
+}
+
+void date_lua(lua_State *L) {
+    lua_pushcfunction(L, set_timezones);
+    lua_setglobal(L, "timezones");
+}
+
+void *date_init(lua_State *L) {
+    struct tz *v = get_timezones(L);
+    if(!v) {
+        if(!(v = calloc(2, sizeof(*v))))
+            return LOG_ERRNO("calloc"), NULL;
+        *v = (struct tz){.name = strdup("UTC"), .id = strdup("UTC")};
+    }
+    const char *const tz = getenv("TZ");
+    if(!init_tzs(v) || !restore_tz(tz))
+        return date_destroy(v), NULL;
     return v;
 }
 
