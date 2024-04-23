@@ -3,7 +3,9 @@
 
 #include <stdbool.h>
 
-void *battery_init(void);
+struct lua_State;
+
+void *battery_init(struct lua_State *L);
 bool battery_destroy(void *d);
 bool battery_update(void *d);
 

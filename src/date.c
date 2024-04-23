@@ -18,7 +18,8 @@ struct tz {
 static bool init_tzs(struct tz *v);
 static bool restore_tz(const char *tz);
 
-void *date_init(void) {
+void *date_init(struct lua_State *L) {
+    (void)L;
     const struct tz tzs[] = {
         {.name = "P  ", .id = "US/Pacific"},
         {.name = "E  ", .id = "US/Eastern"},

@@ -189,12 +189,13 @@ static bool init_config(struct config *c) {
 }
 
 static bool init_modules(struct config *config) {
+    struct lua_State *const L = config->L;
     const u8 enabled = config->enabled_modules;
     for(size_t i = 0; i != ARRAY_SIZE(modules); ++i) {
         struct module *const m = modules + i;
         if(enabled && !(enabled & (1u << i)))
             continue;
-        if(!(m->data = m->init())) {
+        if(!(m->data = m->init(L))) {
             LOG_ERR("failed to initialize module \"%s\"\n", m->name);
             return false;
         }

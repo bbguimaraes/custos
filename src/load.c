@@ -8,7 +8,8 @@
 
 #define PATH "/proc/loadavg"
 
-void *load_init(void) {
+void *load_init(struct lua_State *L) {
+    (void)L;
     return open_file(PATH, "r");
 }
 

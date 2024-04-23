@@ -3,7 +3,9 @@
 
 #include <stdbool.h>
 
-void *thermal_init(void);
+struct lua_State;
+
+void *thermal_init(struct lua_State *L);
 bool thermal_destroy(void *d);
 bool thermal_update(void *d);
 
