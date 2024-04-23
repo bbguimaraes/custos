@@ -5,6 +5,7 @@
 
 struct lua_State;
 
+void battery_lua(struct lua_State *L);
 void *battery_init(struct lua_State *L);
 bool battery_destroy(void *d);
 bool battery_update(void *d);

@@ -3,12 +3,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <lua.h>
+
 #include "utils.h"
 
 #define NOW "/energy_now"
 #define FULL "/energy_full"
 #define DESIGN "/energy_full_design"
 #define STATUS "/status"
+#define VAR_LUA "battery.batteries"
 
 #define STATUS_MAX 32
 
@@ -16,6 +19,31 @@ struct battery {
     char *name, *base;
     FILE *now, *full, *design, *status;
 };
+
+static int set_batteries(lua_State *L) {
+    lua_setglobal(L, VAR_LUA);
+    return 0;
+}
+
+static struct battery *get_batteries(lua_State *L) {
+    if(lua_getglobal(L, VAR_LUA) == LUA_TNIL)
+        return lua_pop(L, 1), NULL;
+    lua_len(L, -1);
+    const lua_Integer n = lua_tointeger(L, -1);
+    struct battery *const v = calloc((size_t)(n + 1), sizeof(*v));
+    if(!v)
+        return lua_pop(L, 2), LOG_ERRNO("calloc"), NULL;
+    for(lua_Integer i = 0; i != n; ++i) {
+        lua_geti(L, -2, i + 1);
+        lua_geti(L, -1, 1);
+        lua_geti(L, -2, 2);
+        v[i].name = strdup(lua_tostring(L, -2));
+        v[i].base = strdup(lua_tostring(L, -1));
+        lua_pop(L, 3);
+    }
+    lua_pop(L, 2);
+    return v;
+}
 
 static bool init(struct battery *d) {
     char path[CUSTOS_MAX_PATH];
@@ -76,13 +104,19 @@ static void render(
     puts("]");
 }
 
-void *battery_init(struct lua_State *L) {
-    (void)L;
-    struct battery *const v = calloc(2, sizeof(*v));
-    if(!v)
-        return LOG_ERRNO("callc"), NULL;
-    v->name = strdup("0");
-    v->base = strdup("/sys/class/power_supply/BAT0");
+void battery_lua(lua_State *L) {
+    lua_pushcfunction(L, set_batteries);
+    lua_setglobal(L, "batteries");
+}
+
+void *battery_init(lua_State *L) {
+    struct battery *v = get_batteries(L);
+    if(!v) {
+        if(!(v = calloc(2, sizeof(*v))))
+            return LOG_ERRNO("calloc"), NULL;
+        v->name = strdup("0");
+        v->base = strdup("/sys/class/power_supply/BAT0");
+    }
     if(!init(v)) {
         battery_destroy(v);
         return NULL;
