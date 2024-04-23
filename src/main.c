@@ -50,6 +50,7 @@ static struct module modules[] = {{
     .update = battery_update,
 }, {
     .name = "date",
+    .lua = date_lua,
     .init = date_init,
     .destroy = date_destroy,
     .update = date_update,
