@@ -8,7 +8,12 @@
 #include <string.h>
 
 #include <glob.h>
+
+#include <lua.h>
+
 #include "utils.h"
+
+#define VAR_LUA "thermal.inputs"
 
 struct data {
     FILE *input;
@@ -96,10 +101,38 @@ e0:
     return NULL;
 }
 
+static int set_inputs(lua_State *L) {
+    lua_setglobal(L, VAR_LUA);
+    return 0;
+}
+
+struct data *get_inputs(lua_State *L) {
+    if(lua_getglobal(L, VAR_LUA) == LUA_TNIL)
+        return lua_pop(L, 1), NULL;
+    lua_len(L, 1);
+    const lua_Integer n = lua_tointeger(L, -1);
+    struct data *const v = calloc((size_t)(n + 1), sizeof(*v));
+    if(!v)
+        return lua_pop(L, 2), LOG_ERRNO("calloc"), NULL;
+    for(lua_Integer i = 0; i != n; ++i) {
+        lua_geti(L, -2, i + 1);
+        v[i].path = strdup(lua_tostring(L, -1));
+        lua_pop(L, 1);
+    }
+    lua_pop(L, 2);
+    return v;
+}
+
+void thermal_lua(lua_State *L) {
+    lua_pushcfunction(L, set_inputs);
+    lua_setglobal(L, "thermal");
+}
+
 void *thermal_init(struct lua_State *L) {
-    (void)L;
-    struct data *v = init_from_glob(
-        "/sys/devices/platform/coretemp.0/hwmon/*/temp*_input");
+    struct data *v = get_inputs(L);
+    if(!v)
+        v = init_from_glob(
+            "/sys/devices/platform/coretemp.0/hwmon/*/temp*_input");
     if(!v)
         return NULL;
     for(struct data *p = v; p->path; ++p)
