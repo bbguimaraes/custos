@@ -45,6 +45,7 @@ static sig_atomic_t interrupted = 0;
 
 static struct module modules[] = {{
     .name = "battery",
+    .lua = battery_lua,
     .init = battery_init,
     .destroy = battery_destroy,
     .update = battery_update,
