@@ -11,8 +11,9 @@ void test_lua(struct lua_State *L) {
     lua_call(L, 1, 0);
 }
 
-void *test_init(void) {
+void *test_init(struct lua_State *L) {
     puts(__func__);
+    printf("    L: %p\n", (void*)L);
     return &errno;
 }
 

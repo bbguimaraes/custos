@@ -96,7 +96,8 @@ e0:
     return NULL;
 }
 
-void *thermal_init(void) {
+void *thermal_init(struct lua_State *L) {
+    (void)L;
     struct data *v = init_from_glob(
         "/sys/devices/platform/coretemp.0/hwmon/*/temp*_input");
     if(!v)

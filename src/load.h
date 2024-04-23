@@ -3,7 +3,9 @@
 
 #include <stdbool.h>
 
-void *load_init(void);
+struct lua_State;
+
+void *load_init(struct lua_State *L);
 bool load_destroy(void *d);
 bool load_update(void *d);
 

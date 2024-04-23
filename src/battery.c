@@ -76,7 +76,8 @@ static void render(
     puts("]");
 }
 
-void *battery_init(void) {
+void *battery_init(struct lua_State *L) {
+    (void)L;
     struct battery *const v = calloc(2, sizeof(*v));
     if(!v)
         return LOG_ERRNO("callc"), NULL;

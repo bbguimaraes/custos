@@ -11,7 +11,7 @@ struct module {
     const char *name;
     void *data;
     void (*lua)(struct lua_State*);
-    void *(*init)(void);
+    void *(*init)(struct lua_State*);
     bool (*destroy)(void*);
     bool (*update)(void*);
 };
