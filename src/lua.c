@@ -1,5 +1,7 @@
 #include "custos.h"
 
+#include <glob.h>
+
 #include <lualib.h>
 #include <lauxlib.h>
 
@@ -22,6 +24,20 @@ struct data *get_global(lua_State *L) {
 }
 
 static int nop(lua_State *L) { (void)L; return 0; }
+
+static int glob_lua(lua_State *L) {
+    const char *pattern = luaL_checkstring(L, 1);
+    glob_t paths;
+    switch(glob(pattern, 0, NULL, &paths)) {
+    case GLOB_NOMATCH: return 0;
+    case GLOB_NOSPACE: return luaL_error(L, "glob(%s): NOSPACE\n", pattern);
+    case GLOB_ABORTED: return luaL_error(L, "glob(%s): ABORTED\n", pattern);
+    }
+    for(size_t i = 0; i != paths.gl_pathc; ++i)
+        lua_pushstring(L, paths.gl_pathv[i]);
+    globfree(&paths);
+    return (int)paths.gl_pathc;
+}
 
 static int set_enabled_modules(lua_State *L) {
     struct data *const d = get_global(L);
@@ -57,6 +73,8 @@ lua_State *custos_lua_init(void) {
     if(!L)
         return LOG_ERR("failed to create Lua state\n"), NULL;
     luaL_openlibs(L);
+    lua_pushcfunction(L, glob_lua);
+    lua_setglobal(L, "glob");
     return L;
 }
 
