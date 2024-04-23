@@ -31,7 +31,8 @@ struct config {
     struct timespec t;
     size_t count, interval;
     enum flag flags;
-    char *enabled_modules;
+    /** bitmap which corresponds to \ref modules */
+    u8 enabled_modules;
 };
 
 struct module {
@@ -71,10 +72,18 @@ static struct module modules[] = {{
     .update = thermal_update,
 }};
 
+int module_name_cmp(const void *lhs, const void *rhs) {
+    return strcmp(
+        ((const struct module*)lhs)->name,
+        ((const struct module*)rhs)->name);
+}
+
 static void sigint_handler(int s) {
     (void)s;
     interrupted = 1;
 }
+
+static bool parse_enabled(char *s, u8 *ret);
 
 static bool parse_args(int argc, char *const *argv, struct config *config) {
     static const char *short_opts = "hvci:n:m:";
@@ -106,7 +115,10 @@ static bool parse_args(int argc, char *const *argv, struct config *config) {
                 return false;
             break;
         }
-        case 'm': config->enabled_modules = optarg; break;
+        case 'm':
+            if(!parse_enabled(optarg, &config->enabled_modules))
+                return false;
+            break;
         default: return false;
         }
     }
@@ -125,6 +137,25 @@ static void usage(FILE *f, const char *name) {
         "    --modules LIST...      load only modules in LIST, a\n"
         "                           comma-separated list of names\n",
         name);
+}
+
+static bool parse_enabled(char *s, u8 *ret) {
+    u8 enabled = 0;
+    char *save = NULL, *p = strtok_r(s, ",", &save);
+    if(!p)
+        return LOG_ERR("invalid module list: %s\n", s), false;
+    do {
+        const struct module key = {.name = p};
+        const struct module *const m = bsearch(
+            &key, modules, ARRAY_SIZE(modules), sizeof(*modules),
+            module_name_cmp);
+        if(!m)
+            return LOG_ERR("invalid module name: %s\n", key.name), false;
+        enabled |= (u8)(1u << (m - modules));
+    } while((p = strtok_r(NULL, ",", &save)));
+    if(enabled)
+        *ret = enabled;
+    return true;
 }
 
 static bool print_header(const struct config *config) {
@@ -164,52 +195,18 @@ static bool init_config(struct config *c) {
     return true;
 }
 
-static char **parse_enabled(char *s);
-
 static bool init_modules(struct config *config) {
-    bool ret = false;
-    char **enabled = NULL;
-    if(config->enabled_modules)
-        if(!(enabled = parse_enabled(config->enabled_modules)))
-            goto end;
+    const u8 enabled = config->enabled_modules;
     for(size_t i = 0; i != ARRAY_SIZE(modules); ++i) {
         struct module *const m = modules + i;
-        if(enabled && !find_str((const char *const*)enabled, m->name))
+        if(enabled && !(enabled & (1u << i)))
             continue;
         if(!(m->data = m->init())) {
             LOG_ERR("failed to initialize module \"%s\"\n", m->name);
-            goto end;
+            return false;
         }
     }
-    ret = true;
-end:
-    free(enabled);
-    return ret;
-}
-
-static char **parse_enabled(char *s) {
-    char **ret = NULL;
-    size_t n = 0;
-    for(const char *p = s; *p; ++p)
-        n += *p == ',';
-    if(!(ret = calloc(n + 2, sizeof(*ret)))) {
-        LOG_ERRNO("calloc");
-        goto err;
-    }
-    char *save = NULL, *p = strtok_r(s, ",", &save);
-    if(!p) {
-        LOG_ERR("invalid module list: %s\n", s);
-        goto err;
-    }
-    size_t i = 0;
-    ret[i++] = p;
-    while((p = strtok_r(NULL, ",", &save)))
-        ret[i++] = p;
-    ret[i] = NULL;
-    return ret;
-err:
-    free(ret);
-    return NULL;
+    return true;
 }
 
 static bool destroy_modules(void) {
