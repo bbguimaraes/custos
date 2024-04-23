@@ -66,6 +66,13 @@ static void prepare_config_load(lua_State *L, struct data *d) {
     lua_setglobal(L, G);
     lua_pushcfunction(L, *d->enabled_modules ? nop : set_enabled_modules);
     lua_setglobal(L, "modules");
+    struct module *const modules = d->modules;
+    const size_t n = d->n_modules;
+    for(size_t i = 0; i != n; ++i) {
+        struct module *const m = modules + i;
+        if(m->lua)
+            m->lua(L);
+    }
 }
 
 lua_State *custos_lua_init(void) {

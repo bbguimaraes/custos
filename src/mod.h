@@ -5,9 +5,12 @@
 #include <stddef.h>
 #include <string.h>
 
+struct lua_State;
+
 struct module {
     const char *name;
     void *data;
+    void (*lua)(struct lua_State*);
     void *(*init)(void);
     bool (*destroy)(void*);
     bool (*update)(void*);

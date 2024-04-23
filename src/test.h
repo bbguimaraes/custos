@@ -3,6 +3,9 @@
 
 #include <stdbool.h>
 
+struct lua_State;
+
+void test_lua(struct lua_State *L);
 void *test_init(void);
 bool test_destroy(void *d);
 bool test_update(void *d);
