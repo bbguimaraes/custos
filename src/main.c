@@ -45,30 +45,30 @@ struct module {
 static sig_atomic_t interrupted = 0;
 
 static struct module modules[] = {{
-    .name = "test",
-    .init = test_init,
-    .destroy = test_destroy,
-    .update = test_update,
+    .name = "battery",
+    .init = battery_init,
+    .destroy = battery_destroy,
+    .update = battery_update,
+}, {
+    .name = "date",
+    .init = date_init,
+    .destroy = date_destroy,
+    .update = date_update,
 }, {
     .name = "load",
     .init = load_init,
     .destroy = load_destroy,
     .update = load_update,
 }, {
-    .name = "battery",
-    .init = battery_init,
-    .destroy = battery_destroy,
-    .update = battery_update,
+    .name = "test",
+    .init = test_init,
+    .destroy = test_destroy,
+    .update = test_update,
 }, {
     .name = "thermal",
     .init = thermal_init,
     .destroy = thermal_destroy,
     .update = thermal_update,
-}, {
-    .name = "date",
-    .init = date_init,
-    .destroy = date_destroy,
-    .update = date_update,
 }};
 
 static void sigint_handler(int s) {
