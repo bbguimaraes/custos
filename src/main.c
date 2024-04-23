@@ -68,6 +68,7 @@ static struct module modules[] = {{
     .update = test_update,
 }, {
     .name = "thermal",
+    .lua = thermal_lua,
     .init = thermal_init,
     .destroy = thermal_destroy,
     .update = thermal_update,
