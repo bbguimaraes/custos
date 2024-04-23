@@ -1,3 +1,5 @@
+#include "custos.h"
+
 #include <errno.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -22,6 +24,8 @@
 #define DATE_FMT "%Y-%m-%dT%H:%M:%S"
 #define DATE_SIZE sizeof("YYYY-MM-DDTHH:MM:SS")
 
+struct lua_State;
+
 enum flag {
     HELP         = 1 << 0,
     VERBOSE      = 1 << 1,
@@ -34,6 +38,7 @@ struct config {
     enum flag flags;
     /** bitmap which corresponds to \ref modules */
     u8 enabled_modules;
+    struct lua_State *L;
 };
 
 static sig_atomic_t interrupted = 0;
@@ -196,6 +201,16 @@ static bool init_modules(struct config *config) {
     return true;
 }
 
+static bool destroy_modules(void);
+
+static bool destroy(struct config *c) {
+    bool ret = true;
+    ret = destroy_modules() && ret;
+    if(c->L)
+        custos_lua_destroy(c->L);
+    return ret;
+}
+
 static bool destroy_modules(void) {
     bool ret = true;
     for(size_t i = 0; i != ARRAY_SIZE(modules); ++i) {
@@ -236,7 +251,11 @@ int main(int argc, char *const *argv) {
         return 1;
     if(config.flags & HELP)
         return usage(stdout, argv[0]), 0;
-    if(!(init_config(&config) && init_modules(&config)))
+    if(!(init_config(&config)
+        && (config.L = custos_lua_init())
+        && custos_load_config(config.L, &config.enabled_modules)
+        && init_modules(&config)
+    ))
         return 1;
     while(!interrupted) {
         if(!(print_header(&config) && update_modules()))
@@ -246,8 +265,8 @@ int main(int argc, char *const *argv) {
         if(!sleep(&config))
             goto err;
     }
-    return !destroy_modules();
+    return !destroy(&config);
 err:
-    destroy_modules();
+    destroy(&config);
     return 1;
 }

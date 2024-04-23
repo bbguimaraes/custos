@@ -7,6 +7,7 @@ workspace "custos"
         "_POSIX_C_SOURCE=200809L",
         "_XOPEN_SOURCE",
     }
+    links { "lua" }
     warnings "Extra"
 
     filter "configurations:debug"

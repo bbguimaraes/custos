@@ -6,6 +6,7 @@ project "custos"
         "date.c",
         "load.c",
         "load.h",
+        "lua.c",
         "main.c",
         "term.h",
         "term.c",

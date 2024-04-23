@@ -31,3 +31,11 @@ err:
     LOG_ERR("path too long: %s\n", v);
     return false;
 }
+
+bool file_exists(const char *name) {
+    FILE *const f = fopen(name, "r");
+    if(!f)
+        return false;
+    fclose(f);
+    return true;
+}

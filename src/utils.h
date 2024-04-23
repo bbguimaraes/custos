@@ -38,6 +38,7 @@ static inline bool rewind_and_scan(FILE *f, const char *format, void *ret);
 static inline bool rewind_and_read(
     FILE *f, const char *restrict name, size_t *n, char *restrict p);
 bool join_path(char v[static CUSTOS_MAX_PATH], int n, ...);
+bool file_exists(const char *name);
 
 /**
  * Reads an unsigned integer value from a command-line argument.
