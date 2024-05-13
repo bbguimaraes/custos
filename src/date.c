@@ -104,7 +104,8 @@ bool date_destroy(void *d) {
     return true;
 }
 
-bool date_update(void *d) {
+bool date_update(void *d, size_t counter) {
+    (void)counter;
     puts("date");
     time_t t = {0};
     if(time(&t) == -1)

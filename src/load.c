@@ -17,7 +17,8 @@ bool load_destroy(void *d) {
     return close_file(d, PATH);
 }
 
-bool load_update(void *d) {
+bool load_update(void *d, size_t counter) {
+    (void)counter;
     FILE *const f = d;
     puts("load");
     if(fflush(f) == EOF)

@@ -23,8 +23,8 @@ bool test_destroy(void *d) {
     return true;
 }
 
-bool test_update(void *d) {
+bool test_update(void *d, size_t counter) {
     (void)d;
-    puts(__func__);
+    printf("%s %zu\n", __func__, counter);
     return true;
 }

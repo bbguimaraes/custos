@@ -155,7 +155,8 @@ bool thermal_destroy(void *d) {
     return ret;
 }
 
-bool thermal_update(void *d) {
+bool thermal_update(void *d, size_t counter) {
+    (void)counter;
     puts("thermal");
     for(struct data *v = d; v->input; ++v) {
         int temp = 0;

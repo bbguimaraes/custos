@@ -143,7 +143,8 @@ bool battery_destroy(void *d) {
     return ret;
 }
 
-bool battery_update(void *d) {
+bool battery_update(void *d, size_t counter) {
+    (void)counter;
     puts("battery");
     for(struct battery *v = d; v->now; ++v) {
         unsigned long now = 0, full = 0, design = 0;
