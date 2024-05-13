@@ -20,29 +20,35 @@ struct battery {
     FILE *now, *full, *design, *status;
 };
 
+struct data {
+    int unused;
+    struct battery v[];
+};
+
 static int set_batteries(lua_State *L) {
     lua_setglobal(L, VAR_LUA);
     return 0;
 }
 
-static struct battery *get_batteries(lua_State *L) {
+static struct data *get_batteries(lua_State *L) {
     if(lua_getglobal(L, VAR_LUA) == LUA_TNIL)
         return lua_pop(L, 1), NULL;
     lua_len(L, -1);
     const lua_Integer n = lua_tointeger(L, -1);
-    struct battery *const v = calloc((size_t)(n + 1), sizeof(*v));
-    if(!v)
+    struct data *const ret =
+        calloc(1, sizeof(*ret) + (size_t)(n + 1) * sizeof(*ret->v));
+    if(!ret)
         return lua_pop(L, 2), LOG_ERRNO("calloc"), NULL;
     for(lua_Integer i = 0; i != n; ++i) {
         lua_geti(L, -2, i + 1);
         lua_geti(L, -1, 1);
         lua_geti(L, -2, 2);
-        v[i].name = strdup(lua_tostring(L, -2));
-        v[i].base = strdup(lua_tostring(L, -1));
+        ret->v[i].name = strdup(lua_tostring(L, -2));
+        ret->v[i].base = strdup(lua_tostring(L, -1));
         lua_pop(L, 3);
     }
     lua_pop(L, 2);
-    return v;
+    return ret;
 }
 
 static bool init(struct battery *d) {
@@ -110,23 +116,24 @@ void battery_lua(lua_State *L) {
 }
 
 void *battery_init(lua_State *L) {
-    struct battery *v = get_batteries(L);
-    if(!v) {
-        if(!(v = calloc(2, sizeof(*v))))
+    struct data *d = get_batteries(L);
+    if(!d) {
+        if(!(d = calloc(1, sizeof(*d) + 2 * sizeof(*d->v))))
             return LOG_ERRNO("calloc"), NULL;
-        v->name = strdup("0");
-        v->base = strdup("/sys/class/power_supply/BAT0");
+        d->v->name = strdup("0");
+        d->v->base = strdup("/sys/class/power_supply/BAT0");
     }
-    if(!init(v)) {
-        battery_destroy(v);
+    if(!init(d->v)) {
+        battery_destroy(d);
         return NULL;
     }
-    return v;
+    return d;
 }
 
-bool battery_destroy(void *d) {
+bool battery_destroy(void *p) {
+    struct data *const d = p;
     bool ret = true;
-    for(struct battery *v = d; v->now; ++v) {
+    for(struct battery *v = d->v; v->now; ++v) {
 #define X(name, NAME) \
     if(v->name && fclose(v->name)) { \
         LOG_ERRNO("fclose(%s" NAME ")", v->base); \
@@ -143,10 +150,11 @@ bool battery_destroy(void *d) {
     return ret;
 }
 
-bool battery_update(void *d, size_t counter) {
+bool battery_update(void *p, size_t counter) {
     (void)counter;
     puts("battery");
-    for(struct battery *v = d; v->now; ++v) {
+    struct data *const d = p;
+    for(struct battery *v = d->v; v->now; ++v) {
         unsigned long now = 0, full = 0, design = 0;
         char status[STATUS_MAX];
         if(!update(v, &now, &full, &design, status))
