@@ -1,5 +1,6 @@
 #include "battery.h"
 
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -15,13 +16,17 @@
 
 #define STATUS_MAX 32
 
+#define GRAPH_WIDTH 24
+#define GRAPH_UPDATE_RATE (15 * 60)
+
 struct battery {
     char *name, *base;
+    unsigned long *graph;
     FILE *now, *full, *design, *status;
 };
 
 struct data {
-    int unused;
+    int graph_i;
     struct battery v[];
 };
 
@@ -52,6 +57,8 @@ static struct data *get_batteries(lua_State *L) {
 }
 
 static bool init(struct battery *d) {
+    if(!(d->graph = calloc(GRAPH_WIDTH, sizeof(*d->graph))))
+        return LOG_ERRNO("calloc", 0), false;
     char path[CUSTOS_MAX_PATH];
 #define X(name, NAME) \
     if(!(join_path(path, 2, d->base, NAME) && (d->name = fopen(path, "r")))) { \
@@ -84,10 +91,20 @@ static bool update(
     return true;
 }
 
+static void update_graph(size_t n, int i, unsigned long *g, unsigned long x) {
+    const size_t max = GRAPH_WIDTH - 1;
+    if(!n && i == (int)max)
+        memmove(g, g + 1, sizeof(*g) * max);
+    g[i] = (g[i] * n + x) / (n + 1);
+}
+
 static void render_bar(float charge, float full);
+static void render_graph(unsigned long max, unsigned long *v, int i);
 
 static void render(
-    const char *name, float charge, float full, const char *status)
+    const char *name, unsigned long full_ul,
+    float charge, float full, unsigned long *graph, int graph_i,
+    const char *status)
 {
     printf("  %s: %s ", name, status);
     const float abs = charge / full;
@@ -97,15 +114,17 @@ static void render(
         printf("%2.2f%%", 100.0f * abs);
     putchar('|');
     if(charge == 1.0f)
-        fputs("100%", stdout);
+        fputs("100% ", stdout);
     else
-        printf("%2.2f%%", 100.0f * charge);
-    fputs(" [", stdout);
+        printf("%2.2f%% ", 100.0f * charge);
     render_bar(charge, full);
-    printf("] (%s)\n", status);
+    putchar(' ');
+    render_graph(full_ul, graph, graph_i);
+    putchar('\n');
 }
 
 static void render_bar(float charge, float full) {
+    putchar('[');
     const float WIDTH = 21;
     unsigned int i = 0;
     for(const unsigned n = (unsigned)(charge * WIDTH); i != n; ++i)
@@ -114,6 +133,16 @@ static void render_bar(float charge, float full) {
         putchar('-');
     for(char c = '|'; i != WIDTH; ++i, c = '-')
         putchar(c);
+    putchar(']');
+}
+
+static void render_graph(unsigned long max, unsigned long *v, int i) {
+    const char bars[][4] = {" ", "▁", "▂", "▃", "▄", "▅", "▆", "▇", "█"};
+    const int n = sizeof(bars) / sizeof(*bars);
+    for(int x = 0; x <= i; ++x) {
+        const int i = (int)((float)v[x] / (float)max * (float)n);
+        fputs(bars[MIN(i, n - 1)], stdout);
+    }
 }
 
 void battery_lua(lua_State *L) {
@@ -133,6 +162,7 @@ void *battery_init(lua_State *L) {
         battery_destroy(d);
         return NULL;
     }
+    d->graph_i = -1;
     return d;
 }
 
@@ -150,6 +180,7 @@ bool battery_destroy(void *p) {
         X(design, DESIGN)
         X(status, STATUS)
 #undef X
+        free(v->graph);
         free(v->name);
         free(v->base);
     }
@@ -157,19 +188,23 @@ bool battery_destroy(void *p) {
 }
 
 bool battery_update(void *p, size_t counter) {
-    (void)counter;
     puts("battery");
     struct data *const d = p;
+    int graph_i = d->graph_i;
+    counter %= GRAPH_UPDATE_RATE;
+    if(!counter && graph_i != GRAPH_WIDTH - 1)
+        d->graph_i = ++graph_i;
     for(struct battery *v = d->v; v->now; ++v) {
         unsigned long now = 0, full = 0, design = 0;
         char status[STATUS_MAX];
         if(!update(v, &now, &full, &design, status))
             return false;
+        update_graph(counter, graph_i, v->graph, now);
         render(
-            v->name,
+            v->name, full,
             (float)now / (float)design,
             (float)full / (float)design,
-            status);
+            v->graph, graph_i, status);
     }
     return true;
 }
