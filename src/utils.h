@@ -13,6 +13,8 @@
 
 #define CUSTOS_MAX_PATH 4096
 
+#define MIN(x, y) ((y) < (x) ? (y) : (x))
+#define MAX(x, y) ((y) > (x) ? (y) : (x))
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof(*x))
 #define LOG_ERR(...) log_err(__FILE__, __LINE__, __func__, __VA_ARGS__)
 #define LOG_ERRNO(...) log_errno(__FILE__, __LINE__, __func__, __VA_ARGS__)
