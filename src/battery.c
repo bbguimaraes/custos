@@ -84,6 +84,8 @@ static bool update(
     return true;
 }
 
+static void render_bar(float charge, float full);
+
 static void render(
     const char *name, float charge, float full, const char *status)
 {
@@ -98,16 +100,20 @@ static void render(
         fputs("100%", stdout);
     else
         printf("%2.2f%%", 100.0f * charge);
+    fputs(" [", stdout);
+    render_bar(charge, full);
+    printf("] (%s)\n", status);
+}
+
+static void render_bar(float charge, float full) {
     const float WIDTH = 21;
     unsigned int i = 0;
-    fputs(" [", stdout);
     for(const unsigned n = (unsigned)(charge * WIDTH); i != n; ++i)
         putchar('=');
     for(const unsigned n = (unsigned)(full * WIDTH); i != n; ++i)
         putchar('-');
     for(char c = '|'; i != WIDTH; ++i, c = '-')
         putchar(c);
-    puts("]");
 }
 
 void battery_lua(lua_State *L) {
