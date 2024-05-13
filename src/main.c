@@ -34,7 +34,7 @@ enum flag {
 
 struct config {
     struct timespec t;
-    size_t count, interval;
+    size_t count, interval, counter;
     enum flag flags;
     /** bitmap which corresponds to \ref modules */
     u8 enabled_modules;
@@ -230,12 +230,12 @@ static bool destroy_modules(void) {
     return ret;
 }
 
-static bool update_modules(void) {
+static bool update_modules(size_t counter) {
     for(size_t i = 0; i != ARRAY_SIZE(modules); ++i) {
         struct module *const m = modules + i;
         if(!m->data)
             continue;
-        if(!m->update(m->data)) {
+        if(!m->update(m->data, counter)) {
             LOG_ERR("failed to update module \"%s\"\n", m->name);
             return false;
         }
@@ -263,9 +263,10 @@ int main(int argc, char *const *argv) {
     ))
         return 1;
     while(!interrupted) {
-        if(!(print_header(&config) && update_modules()))
+        if(!(print_header(&config) && update_modules(config.counter)))
             goto err;
-        if(config.count && !--config.count)
+        ++config.counter;
+        if(config.count && config.count == config.counter)
             break;
         if(!sleep(&config))
             goto err;

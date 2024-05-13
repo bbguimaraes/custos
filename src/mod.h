@@ -13,7 +13,7 @@ struct module {
     void (*lua)(struct lua_State*);
     void *(*init)(struct lua_State*);
     bool (*destroy)(void*);
-    bool (*update)(void*);
+    bool (*update)(void*, size_t);
 };
 
 struct module *get_modules(size_t *n);
