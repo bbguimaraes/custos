@@ -4,6 +4,8 @@ project "custos"
         "battery.c",
         "date.h",
         "date.c",
+        "fs.h",
+        "fs.c",
         "load.c",
         "load.h",
         "lua.c",

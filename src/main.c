@@ -14,6 +14,7 @@
 
 #include "battery.h"
 #include "date.h"
+#include "fs.h"
 #include "load.h"
 #include "mod.h"
 #include "term.h"
@@ -55,6 +56,12 @@ static struct module modules[] = {{
     .init = date_init,
     .destroy = date_destroy,
     .update = date_update,
+}, {
+    .name = "fs",
+    .lua = fs_lua,
+    .init = fs_init,
+    .destroy = fs_destroy,
+    .update = fs_update,
 }, {
     .name = "load",
     .init = load_init,

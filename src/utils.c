@@ -11,6 +11,31 @@ static inline size_t strlcpy(
     return (size_t)(dst - p);
 }
 
+void print_size(size_t n) {
+    const char *suffix[] = {"", "K", "M", "G", "T"};
+    int i = 0;
+    size_t div = 1;
+    while(1000 <= n / div && i < (int)ARRAY_SIZE(suffix))
+        ++i, div *= 1024;
+    const double d = (double)n / (double)div;
+    if(10 <= n / div)
+        printf("%3d%s", (int)round(d), suffix[i]);
+    else
+        printf("%3.1f%s", d, suffix[i]);
+}
+
+void print_bar(float v) {
+    putchar('[');
+    const int WIDTH = 16;
+    int n = (int)(v / 100.0f * (float)WIDTH);
+    for(int i = 0; i != n; ++i)
+        putchar('=');
+    n = WIDTH - n;
+    for(int i = 0; i != n; ++i)
+        putchar('-');
+    putchar(']');
+}
+
 bool join_path(char v[static CUSTOS_MAX_PATH], int n, ...) {
     va_list args;
     va_start(args, n);
