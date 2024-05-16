@@ -37,6 +37,9 @@ static inline void vlog_errno(
     const char *restrict file, int line, const char *restrict fn,
     const char *restrict fmt, va_list args);
 
+static void *checked_calloc(size_t n, size_t s);
+static bool checked_calloc_p(size_t n, size_t s, void **p);
+
 void print_perc(struct window *w, float f);
 void print_size(struct window *w, size_t n);
 void print_bar(struct window *w, float v);
@@ -48,6 +51,20 @@ static inline bool rewind_and_read(
     FILE *f, const char *restrict name, size_t *n, char *restrict p);
 bool join_path(char v[static CUSTOS_MAX_PATH], int n, ...);
 bool file_exists(const char *name);
+
+static inline void *checked_calloc(size_t n, size_t s) {
+    void *ret = NULL;
+    checked_calloc_p(n, s, &ret);
+    return ret;
+}
+
+static inline bool checked_calloc_p(size_t n, size_t s, void **p) {
+    void *const ret = calloc(n, s);
+    if(!ret)
+        return LOG_ERRNO("calloc", 0), false;
+    *p = ret;
+    return true;
+}
 
 /**
  * Reads an unsigned integer value from a command-line argument.
