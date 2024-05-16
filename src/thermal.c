@@ -16,16 +16,23 @@
 #define VAR_LUA "thermal.inputs"
 
 struct data {
-    FILE *input;
+    FILE *input, *max;
     char *path, *label;
 };
 
+static char *max_path(const char *path);
 static char *label_path(const char *path);
 static char *read_label(const char *path);
 
 static bool init(struct data *d) {
     if(!(d->input = open_file(d->path, "r")))
         return false;
+    char *const max = max_path(d->path);
+    if(!max)
+        return false;
+    if(!(d->max = open_file(max, "r")))
+        return free(max), false;
+    free(max);
     char *const label = label_path(d->path);
     if(!label)
         return false;
@@ -35,6 +42,12 @@ static bool init(struct data *d) {
 }
 
 static char *replace(const char *s, const char *repl);
+
+static char *max_path(const char *path) {
+    const char repl[] = "max";
+    static_assert(sizeof(repl) <= sizeof("input"));
+    return replace(path, repl);
+}
 
 static char *label_path(const char *path) {
     const char repl[] = "label";
@@ -148,6 +161,8 @@ bool thermal_destroy(void *d) {
     for(struct data *v = d; v->path; ++v) {
         if(v->input && !close_file(v->input, v->path))
             ret = false;
+        if(v->max && !close_file(v->max, v->path))
+            ret = false;
         free(v->path);
         free(v->label);
     }
@@ -159,10 +174,14 @@ bool thermal_update(void *d, size_t counter) {
     (void)counter;
     puts("thermal");
     for(struct data *v = d; v->input; ++v) {
-        int temp = 0;
+        int temp = 0, max = 0;
         if(!rewind_and_scan(v->input, "%d", &temp))
             return false;
-        printf("  %.1f°C %s\n", (double)temp / 1e3, v->label);
+        if(!rewind_and_scan(v->max, "%d", &max))
+            return false;
+        fputs("  ", stdout);
+        print_bar((float)temp / (float)max * 100.0f);
+        printf(" %.1f°C %s\n", (double)temp / 1e3, v->label);
     }
     return true;
 }
