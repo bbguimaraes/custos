@@ -1,6 +1,7 @@
 #include "custos.h"
 
 #include <errno.h>
+#include <locale.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -204,6 +205,8 @@ static bool init_config(struct config *c) {
         return LOG_ERRNO("signaction"), false;
     if(clock_gettime(CLOCK_MONOTONIC, &c->t) == -1)
         return LOG_ERRNO("clock_gettime"), false;
+    if(c->flags & CLEAR_SCREEN)
+        window_init_curses();
     return true;
 }
 
@@ -254,6 +257,8 @@ static bool destroy(struct config *c) {
     for(size_t i = 0; i != c->n_windows; ++i)
         window_destroy(c->windows + i);
     free(c->windows);
+    if(c->flags & CLEAR_SCREEN)
+        window_destroy_curses();
     if(c->L)
         custos_lua_destroy(c->L);
     return ret;
@@ -295,6 +300,7 @@ int main(int argc, char *const *argv) {
     struct config config = {
         .interval = 1,
     };
+    setlocale(LC_ALL, "");
     if(!parse_args(argc, argv, &config))
         return 1;
     if(config.flags & HELP)
@@ -307,6 +313,8 @@ int main(int argc, char *const *argv) {
     ))
         goto err;
     while(!interrupted) {
+        if(window_input())
+            break;
         if(!print_header(&config))
             goto err;
         if(!update_modules(config.counter, config.windows))
