@@ -2,6 +2,7 @@
 #define CUSTOS_UTILS_H
 
 #include <errno.h>
+#include <math.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -33,6 +34,9 @@ static inline void vlog_err(
 static inline void vlog_errno(
     const char *restrict file, int line, const char *restrict fn,
     const char *restrict fmt, va_list args);
+
+void print_size(size_t n);
+void print_bar(float v);
 
 static inline FILE *open_file(const char *path, const char *mode);
 static inline bool close_file(FILE *f, const char *path);
