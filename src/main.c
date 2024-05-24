@@ -12,6 +12,7 @@
 #include <signal.h>
 #include <time.h>
 
+#include "backlight.h"
 #include "battery.h"
 #include "date.h"
 #include "fs.h"
@@ -45,6 +46,12 @@ struct config {
 static sig_atomic_t interrupted = 0;
 
 static struct module modules[] = {{
+    .name = "backlight",
+    .lua = backlight_lua,
+    .init = backlight_init,
+    .destroy = backlight_destroy,
+    .update = backlight_update,
+}, {
     .name = "battery",
     .lua = battery_lua,
     .init = battery_init,

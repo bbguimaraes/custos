@@ -1,5 +1,7 @@
 project "custos"
     files {
+        "backlight.h",
+        "backlight.c",
         "battery.h",
         "battery.c",
         "date.h",
