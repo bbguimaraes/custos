@@ -5,8 +5,8 @@
 
 #include <lua.h>
 
-#include "term.h"
 #include "utils.h"
+#include "window.h"
 
 #define VAR_LUA "backlight.backlights"
 
@@ -97,23 +97,23 @@ bool backlight_destroy(void *d) {
     return ret;
 }
 
-bool backlight_update(void *d, size_t counter) {
+bool backlight_update(void *d, size_t counter, struct window *w) {
     (void)counter;
-    term_bold_text(stdout);
-    puts("backlight");
-    term_normal_text(stdout);
+    window_bold_text(w);
+    window_print(w, "backlight\n");
+    window_normal_text(w);
     for(struct source *v = d; v->name; ++v) {
         int cur, max;
         if(!rewind_and_scan(v->cur, "%d", &cur))
             return false;
         if(!rewind_and_scan(v->max, "%d", &max))
             return false;
-        fputs("  ", stdout);
+        window_print(w, "  ");
         const float b = 100.0f * (float)cur / (float)max;
-        print_bar(b);
-        fputs(" ", stdout);
-        print_perc(b);
-        printf(" %s\n", v->name);
+        print_bar(w, b);
+        window_print(w, " ");
+        print_perc(w, b);
+        window_printf(w, " %s\n", v->name);
     }
     return true;
 }

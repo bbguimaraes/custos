@@ -6,8 +6,8 @@
 
 #include <lua.h>
 
-#include "term.h"
 #include "utils.h"
+#include "window.h"
 
 #define NOW "/energy_now"
 #define FULL "/energy_full"
@@ -99,47 +99,50 @@ static void update_graph(size_t n, int i, unsigned long *g, unsigned long x) {
     g[i] = (g[i] * n + x) / (n + 1);
 }
 
-static void render_bar(float charge, float full);
-static void render_graph(unsigned long max, unsigned long *v, int i);
+static void render_bar(struct window *w, float charge, float full);
+static void render_graph(
+    struct window *w, unsigned long max, unsigned long *v, int i);
 
 static void render(
-    const char *name, unsigned long full_ul,
+    struct window *w, const char *name, unsigned long full_ul,
     float charge, float full, unsigned long *graph, int graph_i,
     const char *status)
 {
-    fputs("  ", stdout);
-    render_bar(charge, full);
-    putchar(' ');
+    window_print(w, "  ");
+    render_bar(w, charge, full);
+    window_print(w, " ");
     const float abs = charge / full;
-    print_perc(abs * 100.0f);
-    putchar('|');
-    print_perc(charge * 100.0f);
-    printf(" %s\n   ", name);
-    render_graph(full_ul, graph, graph_i);
-    printf("      %s\n", status);
+    print_perc(w, abs * 100.0f);
+    window_print(w, "|");
+    print_perc(w, charge * 100.0f);
+    window_printf(w, " %s\n   ", name);
+    render_graph(w, full_ul, graph, graph_i);
+    window_printf(w, "      %s\n", status);
 }
 
-static void render_bar(float charge, float full) {
-    putchar('[');
+static void render_bar(struct window *w, float charge, float full) {
+    window_print(w, "[");
     const float WIDTH = 16;
     unsigned int i = 0;
     for(const unsigned n = (unsigned)(charge * WIDTH); i != n; ++i)
-        putchar('=');
+        window_print(w, "=");
     for(const unsigned n = (unsigned)(full * WIDTH); i != n; ++i)
-        putchar('-');
-    for(char c = '|'; i != WIDTH; ++i, c = '-')
-        putchar(c);
-    putchar(']');
+        window_print(w, "-");
+    for(const char *c = "|"; i != WIDTH; ++i, c = "-")
+        window_print(w, c);
+    window_print(w, "]");
 }
 
-static void render_graph(unsigned long max, unsigned long *v, int i) {
+static void render_graph(
+    struct window *w, unsigned long max, unsigned long *v, int i)
+{
     const char bars[][4] = {" ", "▁", "▂", "▃", "▄", "▅", "▆", "▇", "█"};
     const int n = sizeof(bars) / sizeof(*bars);
     for(int x = 0; x <= i; ++x) {
         const int i = (int)((float)v[x] / (float)max * (float)n);
-        fputs(bars[MIN(i, n - 1)], stdout);
+        window_print(w, bars[MIN(i, n - 1)]);
     }
-    printf("%*s", GRAPH_WIDTH - i - 1, "");
+    window_printf(w, "%*s", GRAPH_WIDTH - i - 1, "");
 }
 
 void battery_lua(lua_State *L) {
@@ -184,10 +187,10 @@ bool battery_destroy(void *p) {
     return ret;
 }
 
-bool battery_update(void *p, size_t counter) {
-    term_bold_text(stdout);
-    puts("battery");
-    term_normal_text(stdout);
+bool battery_update(void *p, size_t counter, struct window *w) {
+    window_bold_text(w);
+    window_print(w, "battery\n");
+    window_normal_text(w);
     struct data *const d = p;
     int graph_i = d->graph_i;
     counter %= GRAPH_UPDATE_RATE;
@@ -200,7 +203,7 @@ bool battery_update(void *p, size_t counter) {
             return false;
         update_graph(counter, graph_i, v->graph, now);
         render(
-            v->name, full,
+            w, v->name, full,
             (float)now / (float)design,
             (float)full / (float)design,
             v->graph, graph_i, status);

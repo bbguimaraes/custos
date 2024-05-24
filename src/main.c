@@ -273,12 +273,12 @@ static bool destroy_modules(void) {
     return ret;
 }
 
-static bool update_modules(size_t counter) {
+static bool update_modules(size_t counter, struct window *w) {
     for(size_t i = 0; i != ARRAY_SIZE(modules); ++i) {
         struct module *const m = modules + i;
         if(!m->data)
             continue;
-        if(!m->update(m->data, counter)) {
+        if(!m->update(m->data, counter, w)) {
             LOG_ERR("failed to update module \"%s\"\n", m->name);
             return false;
         }
@@ -309,7 +309,7 @@ int main(int argc, char *const *argv) {
     while(!interrupted) {
         if(!print_header(&config))
             goto err;
-        if(!update_modules(config.counter))
+        if(!update_modules(config.counter, config.windows))
             goto err;
         for(size_t i = 0; i != config.n_windows; ++i)
             window_refresh(config.windows + i);

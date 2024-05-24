@@ -8,8 +8,8 @@
 
 #include <lua.h>
 
-#include "term.h"
 #include "utils.h"
+#include "window.h"
 
 #define VAR_LUA "fs.file_systems"
 #define UPDATE_RATE 60
@@ -75,23 +75,23 @@ bool fs_destroy(void *p) {
     return true;
 }
 
-bool fs_update(void *p, size_t counter) {
-    term_bold_text(stdout);
-    puts("fs");
-    term_normal_text(stdout);
+bool fs_update(void *d, size_t counter, struct window *w) {
+    window_bold_text(w);
+    window_print(w, "fs\n");
+    window_normal_text(w);
     const bool update = !(counter % UPDATE_RATE);
-    for(struct fs *v = p; v->name; ++v) {
+    for(struct fs *v = d; v->name; ++v) {
         if(update && !update_fs(v))
             return false;
-        fputs("  ", stdout);
-        print_bar(v->use);
-        putchar(' ');
-        print_perc(v->use);
-        putchar(' ');
-        print_size(v->free);
-        fputs("/", stdout);
-        print_size(v->total);
-        printf(" %s\n", v->name);
+        window_print(w, "  ");
+        print_bar(w, v->use);
+        window_print(w, " ");
+        print_perc(w, v->use);
+        window_print(w, " ");
+        print_size(w, v->free);
+        window_print(w, "/");
+        print_size(w, v->total);
+        window_printf(w, " %s\n", v->name);
     }
     return true;
 }

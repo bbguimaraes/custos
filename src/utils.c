@@ -2,6 +2,8 @@
 
 #include <assert.h>
 
+#include "window.h"
+
 static inline size_t strlcpy(
     char *restrict dst, const char *restrict src, size_t n)
 {
@@ -11,14 +13,14 @@ static inline size_t strlcpy(
     return (size_t)(dst - p);
 }
 
-void print_perc(float f) {
+void print_perc(struct window *w, float f) {
     if(f == 100.0f)
-        fputs(" 100%", stdout);
+        window_print(w, " 100%");
     else
-        printf("%4.1f%%", f);
+        window_printf(w, "%4.1f%%", f);
 }
 
-void print_size(size_t n) {
+void print_size(struct window *w, size_t n) {
     const char *suffix[] = {"", "K", "M", "G", "T"};
     int i = 0;
     size_t div = 1;
@@ -26,21 +28,21 @@ void print_size(size_t n) {
         ++i, div *= 1024;
     const double d = (double)n / (double)div;
     if(10 <= n / div)
-        printf("%3d%s", (int)round(d), suffix[i]);
+        window_printf(w, "%3d%s", (int)round(d), suffix[i]);
     else
-        printf("%3.1f%s", d, suffix[i]);
+        window_printf(w, "%3.1f%s", d, suffix[i]);
 }
 
-void print_bar(float v) {
-    putchar('[');
+void print_bar(struct window *w, float v) {
+    window_print(w, "[");
     const int WIDTH = 16;
     int n = (int)(v / 100.0f * (float)WIDTH);
     for(int i = 0; i != n; ++i)
-        putchar('=');
+        window_print(w, "=");
     n = WIDTH - n;
     for(int i = 0; i != n; ++i)
-        putchar('-');
-    putchar(']');
+        window_print(w, "-");
+    window_print(w, "]");
 }
 
 bool join_path(char v[static CUSTOS_MAX_PATH], int n, ...) {

@@ -4,8 +4,8 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "term.h"
 #include "utils.h"
+#include "window.h"
 
 #define PATH "/proc/loadavg"
 
@@ -18,11 +18,11 @@ bool load_destroy(void *d) {
     return close_file(d, PATH);
 }
 
-bool load_update(void *d, size_t counter) {
+bool load_update(void *d, size_t counter, struct window *w) {
     (void)counter;
-    term_bold_text(stdout);
-    puts("load");
-    term_normal_text(stdout);
+    window_bold_text(w);
+    window_print(w, "load\n");
+    window_normal_text(w);
     FILE *const f = d;
     if(fflush(f) == EOF)
         return LOG_ERRNO("fflush(" PATH ")"), false;
@@ -32,6 +32,6 @@ bool load_update(void *d, size_t counter) {
         LOG_ERRNO("invalid content read from \"" PATH "\", errno");
         return false;
     }
-    printf("  %.2f %.2f %.2f\n", l1, l5, l15);
+    window_printf(w, "  %.2f %.2f %.2f\n", l1, l5, l15);
     return true;
 }
