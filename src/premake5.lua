@@ -20,4 +20,6 @@ project "custos"
         "thermal.h",
         "utils.c",
         "utils.h",
+        "window.h",
+        "window.c",
     }
