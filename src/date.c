@@ -7,8 +7,8 @@
 
 #include <lua.h>
 
-#include "term.h"
 #include "utils.h"
+#include "window.h"
 
 #define DATE_FMT "%Y-%m-%dT%H:%M:%S"
 #define DATE_SIZE sizeof("YYYY-MM-DDTHH:MM:SS")
@@ -105,11 +105,11 @@ bool date_destroy(void *d) {
     return true;
 }
 
-bool date_update(void *d, size_t counter) {
+bool date_update(void *d, size_t counter, struct window *w) {
     (void)counter;
-    term_bold_text(stdout);
-    puts("date");
-    term_normal_text(stdout);
+    window_bold_text(w);
+    window_print(w, "date\n");
+    window_normal_text(w);
     time_t t = {0};
     if(time(&t) == -1)
         return LOG_ERRNO("time"), false;
@@ -121,7 +121,7 @@ bool date_update(void *d, size_t counter) {
         char str[DATE_SIZE] = {0};
         if(strftime(str, sizeof(str), DATE_FMT, &tm) != sizeof(str) - 1)
             return LOG_ERR("strftime failed\n"), false;
-        printf("  %s %s\n", v->name, str);
+        window_printf(w, "  %s %s\n", v->name, str);
     }
     return true;
 }

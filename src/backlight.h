@@ -11,6 +11,6 @@ struct window;
 void backlight_lua(struct lua_State *L);
 void *backlight_init(struct lua_State *L);
 bool backlight_destroy(void *d);
-bool backlight_update(void *d, size_t counter);
+bool backlight_update(void *d, size_t counter, struct window *w);
 
 #endif

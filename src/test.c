@@ -5,6 +5,8 @@
 
 #include <lauxlib.h>
 
+#include "window.h"
+
 void test_lua(struct lua_State *L) {
     lua_getglobal(L, "print");
     lua_pushstring(L, __func__);
@@ -23,8 +25,8 @@ bool test_destroy(void *d) {
     return true;
 }
 
-bool test_update(void *d, size_t counter) {
+bool test_update(void *d, size_t counter, struct window *w) {
     (void)d;
-    printf("%s %zu\n", __func__, counter);
+    window_printf(w, "%s %zu\n", __func__, counter);
     return true;
 }

@@ -7,13 +7,15 @@
 
 struct lua_State;
 
+struct window;
+
 struct module {
     const char *name;
     void *data;
     void (*lua)(struct lua_State*);
     void *(*init)(struct lua_State*);
     bool (*destroy)(void*);
-    bool (*update)(void*, size_t);
+    bool (*update)(void*, size_t, struct window*);
 };
 
 struct module *get_modules(size_t *n);

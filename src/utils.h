@@ -20,6 +20,8 @@
 #define LOG_ERR(...) log_err(__FILE__, __LINE__, __func__, __VA_ARGS__)
 #define LOG_ERRNO(...) log_errno(__FILE__, __LINE__, __func__, __VA_ARGS__)
 
+struct window;
+
 typedef uint8_t u8;
 
 static inline void log_err(
@@ -35,9 +37,9 @@ static inline void vlog_errno(
     const char *restrict file, int line, const char *restrict fn,
     const char *restrict fmt, va_list args);
 
-void print_perc(float f);
-void print_size(size_t n);
-void print_bar(float v);
+void print_perc(struct window *w, float f);
+void print_size(struct window *w, size_t n);
+void print_bar(struct window *w, float v);
 
 static inline FILE *open_file(const char *path, const char *mode);
 static inline bool close_file(FILE *f, const char *path);
