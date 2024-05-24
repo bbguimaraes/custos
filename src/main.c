@@ -18,10 +18,10 @@
 #include "fs.h"
 #include "load.h"
 #include "mod.h"
-#include "term.h"
 #include "test.h"
 #include "thermal.h"
 #include "utils.h"
+#include "window.h"
 
 #define DATE_FMT "%Y-%m-%dT%H:%M:%S"
 #define DATE_SIZE sizeof("YYYY-MM-DDTHH:MM:SS")
@@ -36,11 +36,12 @@ enum flag {
 
 struct config {
     struct timespec t;
-    size_t count, interval, counter;
+    size_t count, interval, counter, n_windows;
     enum flag flags;
     /** bitmap which corresponds to \ref modules */
     u8 enabled_modules;
     struct lua_State *L;
+    struct window *windows;
 };
 
 static sig_atomic_t interrupted = 0;
@@ -168,7 +169,7 @@ static bool parse_enabled(char *s, u8 *ret) {
     return true;
 }
 
-static bool print_header(const struct config *c) {
+static bool print_header(struct config *c) {
     time_t t = {0};
     if(time(&t) == -1)
         return LOG_ERRNO("time"), false;
@@ -179,7 +180,8 @@ static bool print_header(const struct config *c) {
     if(strftime(str, sizeof(str), DATE_FMT, &tm) != sizeof(str) - 1)
         return LOG_ERR("strftime failed\n"), false;
     if(c->flags & CLEAR_SCREEN)
-        term_clear(stdout);
+        for(size_t i = 0; i != c->n_windows; ++i)
+            window_clear(c->windows + i);
     else
         puts("");
     printf("%s\n\n", str);
@@ -205,6 +207,30 @@ static bool init_config(struct config *c) {
     return true;
 }
 
+static bool init_default_window(struct config *c) {
+    int width, height;
+    if(!window_screen_size(&width, &height))
+        return false;
+    struct window *const windows = malloc(sizeof(*windows));
+    if(!windows)
+        return LOG_ERRNO("malloc", 0), false;
+    *windows = (struct window) {.width = width, .height = height};
+    c->windows = windows;
+    c->n_windows = 1;
+    return true;
+}
+
+static bool init_windows(struct config *c) {
+    if(!c->windows && !init_default_window(c))
+        return false;
+    for(size_t i = 0; i != c->n_windows; ++i) {
+        struct window *const w = c->windows + i;
+        if(!window_init(w, w->width, w->height, w->x, w->y))
+            return false;
+    }
+    return true;
+}
+
 static bool init_modules(struct config *c) {
     struct lua_State *const L = c->L;
     const u8 enabled = c->enabled_modules;
@@ -225,6 +251,9 @@ static bool destroy_modules(void);
 static bool destroy(struct config *c) {
     bool ret = true;
     ret = destroy_modules() && ret;
+    for(size_t i = 0; i != c->n_windows; ++i)
+        window_destroy(c->windows + i);
+    free(c->windows);
     if(c->L)
         custos_lua_destroy(c->L);
     return ret;
@@ -273,12 +302,17 @@ int main(int argc, char *const *argv) {
     if(!(init_config(&config)
         && (config.L = custos_lua_init())
         && custos_load_config(config.L, &config.enabled_modules)
+        && init_windows(&config)
         && init_modules(&config)
     ))
-        return 1;
+        goto err;
     while(!interrupted) {
-        if(!(print_header(&config) && update_modules(config.counter)))
+        if(!print_header(&config))
             goto err;
+        if(!update_modules(config.counter))
+            goto err;
+        for(size_t i = 0; i != config.n_windows; ++i)
+            window_refresh(config.windows + i);
         ++config.counter;
         if(config.count && config.count == config.counter)
             break;
