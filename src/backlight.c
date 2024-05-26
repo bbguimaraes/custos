@@ -5,6 +5,7 @@
 
 #include <lua.h>
 
+#include "term.h"
 #include "utils.h"
 
 #define VAR_LUA "backlight.backlights"
@@ -98,7 +99,9 @@ bool backlight_destroy(void *d) {
 
 bool backlight_update(void *d, size_t counter) {
     (void)counter;
+    term_bold_text(stdout);
     puts("backlight");
+    term_normal_text(stdout);
     for(struct source *v = d; v->name; ++v) {
         int cur, max;
         if(!rewind_and_scan(v->cur, "%d", &cur))

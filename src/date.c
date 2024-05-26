@@ -7,6 +7,7 @@
 
 #include <lua.h>
 
+#include "term.h"
 #include "utils.h"
 
 #define DATE_FMT "%Y-%m-%dT%H:%M:%S"
@@ -106,7 +107,9 @@ bool date_destroy(void *d) {
 
 bool date_update(void *d, size_t counter) {
     (void)counter;
+    term_bold_text(stdout);
     puts("date");
+    term_normal_text(stdout);
     time_t t = {0};
     if(time(&t) == -1)
         return LOG_ERRNO("time"), false;

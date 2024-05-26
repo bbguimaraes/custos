@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "term.h"
 #include "utils.h"
 
 #define PATH "/proc/loadavg"
@@ -19,8 +20,10 @@ bool load_destroy(void *d) {
 
 bool load_update(void *d, size_t counter) {
     (void)counter;
-    FILE *const f = d;
+    term_bold_text(stdout);
     puts("load");
+    term_normal_text(stdout);
+    FILE *const f = d;
     if(fflush(f) == EOF)
         return LOG_ERRNO("fflush(" PATH ")"), false;
     rewind(f);
