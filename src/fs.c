@@ -8,6 +8,7 @@
 
 #include <lua.h>
 
+#include "term.h"
 #include "utils.h"
 
 #define VAR_LUA "fs.file_systems"
@@ -75,7 +76,9 @@ bool fs_destroy(void *p) {
 }
 
 bool fs_update(void *p, size_t counter) {
+    term_bold_text(stdout);
     puts("fs");
+    term_normal_text(stdout);
     const bool update = !(counter % UPDATE_RATE);
     for(struct fs *v = p; v->name; ++v) {
         if(update && !update_fs(v))

@@ -6,6 +6,7 @@
 
 #include <lua.h>
 
+#include "term.h"
 #include "utils.h"
 
 #define NOW "/energy_now"
@@ -184,7 +185,9 @@ bool battery_destroy(void *p) {
 }
 
 bool battery_update(void *p, size_t counter) {
+    term_bold_text(stdout);
     puts("battery");
+    term_normal_text(stdout);
     struct data *const d = p;
     int graph_i = d->graph_i;
     counter %= GRAPH_UPDATE_RATE;

@@ -11,6 +11,7 @@
 
 #include <lua.h>
 
+#include "term.h"
 #include "utils.h"
 
 #define VAR_LUA "thermal.inputs"
@@ -172,7 +173,9 @@ bool thermal_destroy(void *d) {
 
 bool thermal_update(void *d, size_t counter) {
     (void)counter;
+    term_bold_text(stdout);
     puts("thermal");
+    term_normal_text(stdout);
     for(struct data *v = d; v->input; ++v) {
         int temp = 0, max = 0;
         if(!rewind_and_scan(v->input, "%d", &temp))
