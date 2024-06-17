@@ -339,7 +339,9 @@ int main(int argc, char *const *argv) {
         return usage(stdout, argv[0]), 0;
     if(!(init_config(&config)
         && (config.L = custos_lua_init())
-        && custos_load_config(config.L, &config.enabled_modules)
+        && custos_load_config(
+            config.L, &config.enabled_modules, &config.windows,
+            &config.n_windows, &config.modules)
         && init_windows(&config)
         && init_modules(&config)
     ))
