@@ -168,7 +168,7 @@ static bool parse_enabled(char *s, u8 *ret) {
     return true;
 }
 
-static bool print_header(const struct config *config) {
+static bool print_header(const struct config *c) {
     time_t t = {0};
     if(time(&t) == -1)
         return LOG_ERRNO("time"), false;
@@ -178,7 +178,7 @@ static bool print_header(const struct config *config) {
     char str[DATE_SIZE] = {0};
     if(strftime(str, sizeof(str), DATE_FMT, &tm) != sizeof(str) - 1)
         return LOG_ERR("strftime failed\n"), false;
-    if(config->flags & CLEAR_SCREEN)
+    if(c->flags & CLEAR_SCREEN)
         term_clear(stdout);
     else
         puts("");
@@ -186,9 +186,9 @@ static bool print_header(const struct config *config) {
     return true;
 }
 
-static bool sleep(struct config *config) {
-    struct timespec *t = &config->t;
-    t->tv_sec = t->tv_sec + (time_t)config->interval;
+static bool sleep(struct config *c) {
+    struct timespec *t = &c->t;
+    t->tv_sec = t->tv_sec + (time_t)c->interval;
     while(clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, t, NULL) == -1)
         if(errno != EINTR)
             return LOG_ERRNO("clock_nanosleep"), false;
@@ -205,9 +205,9 @@ static bool init_config(struct config *c) {
     return true;
 }
 
-static bool init_modules(struct config *config) {
-    struct lua_State *const L = config->L;
-    const u8 enabled = config->enabled_modules;
+static bool init_modules(struct config *c) {
+    struct lua_State *const L = c->L;
+    const u8 enabled = c->enabled_modules;
     for(size_t i = 0; i != ARRAY_SIZE(modules); ++i) {
         struct module *const m = modules + i;
         if(enabled && !(enabled & (1u << i)))
