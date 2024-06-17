@@ -224,14 +224,17 @@ static bool init_default_window(struct config *c) {
         LOG_ERRNO("malloc", 0);
         goto e0;
     }
-    const size_t n_modules = ARRAY_SIZE(modules);
+    size_t n_modules = 0;
+    for(u8 e = c->enabled_modules; e; e >>= 1)
+        n_modules += e & 1;
     *w_modules = calloc(n_modules + 1, sizeof(*w_modules));
     if(!*w_modules) {
         LOG_ERRNO("calloc", 0);
         goto e1;
     }
-    for(size_t i = 0; i != n_modules; ++i)
-        w_modules[0][i] = i;
+    for(size_t i = 0, ie = 0; i != ARRAY_SIZE(modules); ++i)
+        if(c->enabled_modules & (1u << i))
+            w_modules[0][ie++] = i;
     w_modules[0][n_modules] = (size_t)-1;
     c->windows = windows;
     c->n_windows = 1;
@@ -339,7 +342,9 @@ int main(int argc, char *const *argv) {
         return usage(stdout, argv[0]), 0;
     if(!(init_config(&config)
         && (config.L = custos_lua_init())
-        && custos_load_config(config.L, &config.enabled_modules)
+        && custos_load_config(
+            config.L, &config.enabled_modules, &config.windows,
+            &config.n_windows, &config.modules)
         && init_windows(&config)
         && init_modules(&config)
     ))
