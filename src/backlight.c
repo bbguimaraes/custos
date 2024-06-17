@@ -108,7 +108,9 @@ bool backlight_update(void *d, size_t counter) {
         fputs("  ", stdout);
         const float b = 100.0f * (float)cur / (float)max;
         print_bar(b);
-        printf(" %d%% %s\n", (int)b, v->name);
+        fputs(" ", stdout);
+        print_perc(b);
+        printf(" %s\n", v->name);
     }
     return true;
 }

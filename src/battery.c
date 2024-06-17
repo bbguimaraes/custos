@@ -108,15 +108,10 @@ static void render(
 {
     printf("  %s: %s ", name, status);
     const float abs = charge / full;
-    if(abs == 1.0f)
-        fputs("100%", stdout);
-    else
-        printf("%2.2f%%", 100.0f * abs);
+    print_perc(abs * 100.0f);
     putchar('|');
-    if(charge == 1.0f)
-        fputs("100% ", stdout);
-    else
-        printf("%2.2f%% ", 100.0f * charge);
+    print_perc(charge * 100.0f);
+    fputs(" ", stdout);
     render_bar(charge, full);
     putchar(' ');
     render_graph(full_ul, graph, graph_i);

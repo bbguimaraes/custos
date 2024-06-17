@@ -83,10 +83,7 @@ bool fs_update(void *p, size_t counter) {
         fputs("  ", stdout);
         print_bar(v->use);
         putchar(' ');
-        if(v->use == 100.0f)
-            fputs("100%", stdout);
-        else
-            printf("%4.1f%%", v->use);
+        print_perc(v->use);
         putchar(' ');
         print_size(v->free);
         fputs("/", stdout);

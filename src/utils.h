@@ -35,6 +35,7 @@ static inline void vlog_errno(
     const char *restrict file, int line, const char *restrict fn,
     const char *restrict fmt, va_list args);
 
+void print_perc(float f);
 void print_size(size_t n);
 void print_bar(float v);
 
