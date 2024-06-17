@@ -11,6 +11,13 @@ static inline size_t strlcpy(
     return (size_t)(dst - p);
 }
 
+void print_perc(float f) {
+    if(f == 100.0f)
+        fputs(" 100%", stdout);
+    else
+        printf("%4.1f%%", f);
+}
+
 void print_size(size_t n) {
     const char *suffix[] = {"", "K", "M", "G", "T"};
     int i = 0;
