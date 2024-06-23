@@ -43,6 +43,7 @@ struct config {
     u8 enabled_modules;
     struct lua_State *L;
     struct window *windows;
+    size_t **modules;
 };
 
 static sig_atomic_t interrupted = 0;
@@ -218,9 +219,29 @@ static bool init_default_window(struct config *c) {
     if(!windows)
         return LOG_ERRNO("malloc", 0), false;
     *windows = (struct window) {.width = width, .height = height};
+    size_t **const w_modules = malloc(sizeof(*w_modules));
+    if(!w_modules) {
+        LOG_ERRNO("malloc", 0);
+        goto e0;
+    }
+    const size_t n_modules = ARRAY_SIZE(modules);
+    *w_modules = calloc(n_modules + 1, sizeof(*w_modules));
+    if(!*w_modules) {
+        LOG_ERRNO("calloc", 0);
+        goto e1;
+    }
+    for(size_t i = 0; i != n_modules; ++i)
+        w_modules[0][i] = i;
+    w_modules[0][n_modules] = (size_t)-1;
     c->windows = windows;
     c->n_windows = 1;
+    c->modules = w_modules;
     return true;
+e1:
+    free(w_modules);
+e0:
+    free(windows);
+    return false;
 }
 
 static bool init_windows(struct config *c) {
@@ -256,7 +277,10 @@ static bool destroy(struct config *c) {
     ret = destroy_modules() && ret;
     for(size_t i = 0; i != c->n_windows; ++i)
         window_destroy(c->windows + i);
+    for(size_t i = 0; i != c->n_windows; ++i)
+        free(c->modules[i]);
     free(c->windows);
+    free(c->modules);
     if(c->flags & CLEAR_SCREEN)
         window_destroy_curses();
     if(c->L)
@@ -278,15 +302,23 @@ static bool destroy_modules(void) {
     return ret;
 }
 
-static bool update_modules(size_t counter, struct window *w) {
-    for(size_t i = 0; i != ARRAY_SIZE(modules); ++i) {
-        struct module *const m = modules + i;
-        if(!m->data)
-            continue;
-        if(!m->update(m->data, counter, w)) {
-            LOG_ERR("failed to update module \"%s\"\n", m->name);
-            return false;
-        }
+static bool update_module(struct window *w, size_t counter, struct module *m) {
+    if(!m->update(m->data, counter, w)) {
+        LOG_ERR("failed to update module \"%s\"\n", m->name);
+        return false;
+    }
+    return true;
+}
+
+static bool update_modules(struct config *c) {
+    struct window *const windows = c->windows;
+    size_t **const w_modules = c->modules;
+    const size_t n = c->n_windows, counter = c->counter;
+    for(size_t i = 0; i != n; ++i) {
+        struct window *const w = windows + i;
+        for(size_t *mi = w_modules[i]; *mi != (size_t)-1; ++mi)
+            if(!update_module(w, counter, modules + *mi))
+                return false;
     }
     return true;
 }
@@ -317,7 +349,7 @@ int main(int argc, char *const *argv) {
             break;
         if(!print_header(&config))
             goto err;
-        if(!update_modules(config.counter, config.windows))
+        if(!update_modules(&config))
             goto err;
         for(size_t i = 0; i != config.n_windows; ++i)
             window_refresh(config.windows + i);
