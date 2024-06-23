@@ -10,19 +10,27 @@ workspace "custos"
     links { "curses", "lua", "m" }
     warnings "Extra"
 
-    filter "configurations:debug"
-        defines { "DEBUG" }
-        symbols "On"
+    project "custos"
+        files { "premake5.lua" }
 
-    filter "configurations:release"
-        defines { "NDEBUG" }
-        optimize "On"
+        filter "files:premake5.lua"
+            buildcommands { "premake5 gmake" }
+            buildinputs { "src/premake5.lua" }
+            buildoutputs { "Makefile" }
 
-    filter "toolset:clang or gcc"
-        enablewarnings { "pedantic", "conversion" }
+        filter "configurations:debug"
+            defines { "DEBUG" }
+            symbols "On"
 
-    filter { "configurations:debug", "toolset:clang or gcc" }
-        buildoptions { "-fsanitize=address,undefined", "-fstack-protector" }
-        linkoptions { "-fsanitize=address,undefined", "-fstack-protector" }
+        filter "configurations:release"
+            defines { "NDEBUG" }
+            optimize "On"
 
-    include "src"
+        filter "toolset:clang or gcc"
+            enablewarnings { "pedantic", "conversion" }
+
+        filter { "configurations:debug", "toolset:clang or gcc" }
+            buildoptions { "-fsanitize=address,undefined", "-fstack-protector" }
+            linkoptions { "-fsanitize=address,undefined", "-fstack-protector" }
+
+        include "src"
