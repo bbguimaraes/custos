@@ -106,21 +106,21 @@ static void render(
     float charge, float full, unsigned long *graph, int graph_i,
     const char *status)
 {
-    printf("  %s: %s ", name, status);
+    fputs("  ", stdout);
+    render_bar(charge, full);
+    putchar(' ');
     const float abs = charge / full;
     print_perc(abs * 100.0f);
     putchar('|');
     print_perc(charge * 100.0f);
-    fputs(" ", stdout);
-    render_bar(charge, full);
-    putchar(' ');
+    printf(" %s\n   ", name);
     render_graph(full_ul, graph, graph_i);
-    putchar('\n');
+    printf("      %s\n", status);
 }
 
 static void render_bar(float charge, float full) {
     putchar('[');
-    const float WIDTH = 21;
+    const float WIDTH = 16;
     unsigned int i = 0;
     for(const unsigned n = (unsigned)(charge * WIDTH); i != n; ++i)
         putchar('=');
@@ -138,6 +138,7 @@ static void render_graph(unsigned long max, unsigned long *v, int i) {
         const int i = (int)((float)v[x] / (float)max * (float)n);
         fputs(bars[MIN(i, n - 1)], stdout);
     }
+    printf("%*s", GRAPH_WIDTH - i - 1, "");
 }
 
 void battery_lua(lua_State *L) {
