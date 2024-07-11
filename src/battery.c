@@ -79,6 +79,15 @@ static bool init(struct battery *v) {
     return true;
 }
 
+static void check_value(
+    unsigned long *v, unsigned long max, const char *path)
+{
+    if(*v <= max)
+        return;
+    LOG_ERR("read invalid value for %s (%f), clamping to %f\n", *v, path, max);
+    *v = max;
+}
+
 static bool update(
     struct battery *b,
     unsigned long *now, unsigned long *full, unsigned long *design,
@@ -94,6 +103,8 @@ static bool update(
     if(!rewind_and_read(b->status, "status", &n, status))
         return false;
     status[n - 1] = 0;
+    check_value(full, *design, FULL);
+    check_value(now, *full, NOW);
     return true;
 }
 
@@ -180,10 +191,10 @@ bool battery_destroy(void *p) {
         LOG_ERRNO("fclose(%s" NAME ")", v->base); \
         ret = false; \
     }
-        X(now, NOW)
-        X(full, FULL)
-        X(design, DESIGN)
-        X(status, STATUS)
+        X(now, "/" NOW)
+        X(full, "/" FULL)
+        X(design, "/" DESIGN)
+        X(status, "/" STATUS)
 #undef X
         free(v->graph);
         free(v->name);
