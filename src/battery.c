@@ -18,6 +18,7 @@
 #define STATUS_MAX 32
 
 #define GRAPH_WIDTH 24
+#define GRAPH_HEIGHT 2
 #define GRAPH_UPDATE_RATE (15 * 60)
 
 struct battery {
@@ -126,9 +127,9 @@ static void render(
     print_perc(w, abs * 100.0f);
     window_print(w, "|");
     print_perc(w, charge * 100.0f);
-    window_printf(w, " %s\n   ", name);
+    window_printf(w, " %s %s", status, name);
     render_graph(w, full_ul, graph, graph_i);
-    window_printf(w, "      %s\n", status);
+    window_print(w, "\n");
 }
 
 static void render_bar(struct window *w, float charge, float full) {
@@ -147,13 +148,18 @@ static void render_bar(struct window *w, float charge, float full) {
 static void render_graph(
     struct window *w, unsigned long max, unsigned long *v, int i)
 {
-    enum { W = GRAPH_WIDTH };
+    enum { W = GRAPH_WIDTH, H = GRAPH_HEIGHT };
     const char bars[][sizeof("█")] =
         {" ", "▁", "▂", "▃", "▄", "▅", "▆", "▇", "█"};
     const int n = ARRAY_SIZE(bars);
-    for(int x = 0; x <= i; ++x) {
-        const int i = (int)((float)v[x] / (float)max * (float)n);
-        window_print(w, bars[MIN(i, n - 1)]);
+    const float max_f = nextafterf(1.0f, 0.0f);
+    for(int y = H; y--;) {
+        window_print(w, "\n   ");
+        for(int x = 0; x <= i; ++x) {
+            const float fv = (float)v[x] / (float)max * (float)H - (float)y;
+            const float fi = floorf(CLAMP(fv, 0.0f, max_f) * (float)n);
+            window_print(w, bars[(int)fi]);
+        }
     }
     window_printf(w, "%*s", W - i - 1, "");
 }
