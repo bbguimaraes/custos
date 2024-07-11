@@ -147,13 +147,15 @@ static void render_bar(struct window *w, float charge, float full) {
 static void render_graph(
     struct window *w, unsigned long max, unsigned long *v, int i)
 {
-    const char bars[][4] = {" ", "▁", "▂", "▃", "▄", "▅", "▆", "▇", "█"};
-    const int n = sizeof(bars) / sizeof(*bars);
+    enum { W = GRAPH_WIDTH };
+    const char bars[][sizeof("█")] =
+        {" ", "▁", "▂", "▃", "▄", "▅", "▆", "▇", "█"};
+    const int n = ARRAY_SIZE(bars);
     for(int x = 0; x <= i; ++x) {
         const int i = (int)((float)v[x] / (float)max * (float)n);
         window_print(w, bars[MIN(i, n - 1)]);
     }
-    window_printf(w, "%*s", GRAPH_WIDTH - i - 1, "");
+    window_printf(w, "%*s", W - i - 1, "");
 }
 
 void battery_lua(lua_State *L) {
