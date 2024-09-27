@@ -21,6 +21,10 @@
 #define GRAPH_HEIGHT 2
 #define GRAPH_UPDATE_RATE (15 * 60)
 
+struct graph {
+    int i;
+};
+
 struct battery {
     char *name, *base;
     unsigned long *graph;
@@ -28,7 +32,7 @@ struct battery {
 };
 
 struct data {
-    int graph_i;
+    struct graph graph;
     struct battery v[];
 };
 
@@ -186,7 +190,9 @@ void *battery_init(lua_State *L) {
         battery_destroy(d);
         return NULL;
     }
-    d->graph_i = -1;
+    d->graph = (struct graph) {
+        .i = -1,
+    };
     return d;
 }
 
@@ -217,10 +223,10 @@ bool battery_update(void *p, size_t counter, struct window *w) {
     window_print(w, "battery\n");
     window_normal_text(w);
     struct data *const d = p;
-    int graph_i = d->graph_i;
+    int graph_i = d->graph.i;
     counter %= GRAPH_UPDATE_RATE;
     if(!counter && graph_i != GRAPH_WIDTH - 1)
-        d->graph_i = ++graph_i;
+        d->graph.i = ++graph_i;
     for(struct battery *v = d->v; v->now; ++v) {
         unsigned long now = 0, full = 0, design = 0;
         char status[STATUS_MAX];
