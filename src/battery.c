@@ -17,12 +17,10 @@
 
 #define STATUS_MAX 32
 
-#define GRAPH_WIDTH 24
-#define GRAPH_HEIGHT 2
 #define GRAPH_UPDATE_RATE (15 * 60)
 
 struct graph {
-    int i;
+    int w, h, i;
 };
 
 struct battery {
@@ -62,9 +60,9 @@ static struct data *get_batteries(lua_State *L) {
     return ret;
 }
 
-static bool init(struct battery *v) {
+static bool init(struct battery *v, int graph_width) {
     for(; v->name; ++v) {
-        if(!(v->graph = calloc(GRAPH_WIDTH, sizeof(*v->graph))))
+        if(!(v->graph = calloc((size_t)graph_width, sizeof(*v->graph))))
             return LOG_ERRNO("calloc", 0), false;
         char path[CUSTOS_MAX_PATH];
 #define X(name, NAME) \
@@ -113,8 +111,10 @@ static bool update(
     return true;
 }
 
-static void update_graph(size_t n, int i, unsigned long *g, unsigned long x) {
-    const size_t max = GRAPH_WIDTH - 1;
+static void update_graph(
+    size_t n, int w, int i, unsigned long *g, unsigned long x)
+{
+    const size_t max = (size_t)w - 1;
     if(!n && i == (int)max)
         memmove(g, g + 1, sizeof(*g) * max);
     g[i] = (g[i] * n + x) / (n + 1);
@@ -122,11 +122,11 @@ static void update_graph(size_t n, int i, unsigned long *g, unsigned long x) {
 
 static void render_bar(struct window *w, float charge, float full);
 static void render_graph(
-    struct window *w, unsigned long max, unsigned long *v, int i);
+    struct window *w, unsigned long max, unsigned long *v, struct graph g);
 
 static void render(
     struct window *w, const char *name, unsigned long full_ul,
-    float charge, float full, unsigned long *graph, int graph_i,
+    float charge, float full, unsigned long *graph, struct graph g,
     const char *status)
 {
     window_print(w, "  ");
@@ -137,7 +137,7 @@ static void render(
     window_print(w, "|");
     print_perc(w, charge * 100.0f);
     window_printf(w, " %s %s", status, name);
-    render_graph(w, full_ul, graph, graph_i);
+    render_graph(w, full_ul, graph, g);
     window_print(w, "\n");
 }
 
@@ -155,22 +155,21 @@ static void render_bar(struct window *w, float charge, float full) {
 }
 
 static void render_graph(
-    struct window *w, unsigned long max, unsigned long *v, int i)
+    struct window *w, unsigned long max, unsigned long *v, struct graph g)
 {
-    enum { W = GRAPH_WIDTH, H = GRAPH_HEIGHT };
     const char bars[][sizeof("█")] =
         {" ", "▁", "▂", "▃", "▄", "▅", "▆", "▇", "█"};
     const int n = ARRAY_SIZE(bars);
     const float max_f = nextafterf(1.0f, 0.0f);
-    for(int y = H; y--;) {
+    for(int y = g.h; y--;) {
         window_print(w, "\n   ");
-        for(int x = 0; x <= i; ++x) {
-            const float fv = (float)v[x] / (float)max * (float)H - (float)y;
+        for(int x = 0; x <= g.i; ++x) {
+            const float fv = (float)v[x] / (float)max * (float)g.h - (float)y;
             const float fi = floorf(CLAMP(fv, 0.0f, max_f) * (float)n);
             window_print(w, bars[(int)fi]);
         }
     }
-    window_printf(w, "%*s", W - i - 1, "");
+    window_printf(w, "%*s", g.w - g.i - 1, "");
 }
 
 void battery_lua(lua_State *L) {
@@ -186,13 +185,15 @@ void *battery_init(lua_State *L) {
         d->v->name = strdup("0");
         d->v->base = strdup("/sys/class/power_supply/BAT0");
     }
-    if(!init(d->v)) {
+    d->graph = (struct graph) {
+        .w = 24,
+        .h = 2,
+        .i = -1,
+    };
+    if(!init(d->v, d->graph.w)) {
         battery_destroy(d);
         return NULL;
     }
-    d->graph = (struct graph) {
-        .i = -1,
-    };
     return d;
 }
 
@@ -223,21 +224,22 @@ bool battery_update(void *p, size_t counter, struct window *w) {
     window_print(w, "battery\n");
     window_normal_text(w);
     struct data *const d = p;
+    const int graph_w = d->graph.w;
     int graph_i = d->graph.i;
     counter %= GRAPH_UPDATE_RATE;
-    if(!counter && graph_i != GRAPH_WIDTH - 1)
+    if(!counter && graph_i != graph_w - 1)
         d->graph.i = ++graph_i;
     for(struct battery *v = d->v; v->now; ++v) {
         unsigned long now = 0, full = 0, design = 0;
         char status[STATUS_MAX];
         if(!update(v, &now, &full, &design, status))
             return false;
-        update_graph(counter, graph_i, v->graph, now);
+        update_graph(counter, graph_w, graph_i, v->graph, now);
         render(
             w, v->name, full,
             (float)now / (float)design,
             (float)full / (float)design,
-            v->graph, graph_i, status);
+            v->graph, d->graph, status);
     }
     return true;
 }
