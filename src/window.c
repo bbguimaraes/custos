@@ -17,10 +17,12 @@ void window_init_curses(void) {
     noecho();
     keypad(stdscr, TRUE);
     timeout(0);
+    curs_set(0);
 }
 
 void window_destroy_curses(void) {
     curses = false;
+    curs_set(1);
     echo();
     noraw();
     endwin();
