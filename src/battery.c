@@ -47,16 +47,23 @@ static struct data *get_batteries(lua_State *L) {
     struct data *const ret =
         calloc(1, sizeof(*ret) + (size_t)(n + 1) * sizeof(*ret->v));
     if(!ret)
-        return lua_pop(L, 2), LOG_ERRNO("calloc"), NULL;
+        return lua_pop(L, 3), LOG_ERRNO("calloc"), NULL;
+    if(lua_getfield(L, -2, "graph") != LUA_TNIL) {
+        if(lua_getfield(L, -1, "width") != LUA_TNIL)
+            ret->graph.w = (int)lua_tointeger(L, -1);
+        if(lua_getfield(L, -2, "height") != LUA_TNIL)
+            ret->graph.h = (int)lua_tointeger(L, -1);
+        lua_pop(L, 2);
+    }
     for(lua_Integer i = 0; i != n; ++i) {
-        lua_geti(L, -2, i + 1);
+        lua_geti(L, -3, i + 1);
         lua_geti(L, -1, 1);
         lua_geti(L, -2, 2);
         ret->v[i].name = strdup(lua_tostring(L, -2));
         ret->v[i].base = strdup(lua_tostring(L, -1));
         lua_pop(L, 3);
     }
-    lua_pop(L, 2);
+    lua_pop(L, 3);
     return ret;
 }
 
@@ -185,11 +192,11 @@ void *battery_init(lua_State *L) {
         d->v->name = strdup("0");
         d->v->base = strdup("/sys/class/power_supply/BAT0");
     }
-    d->graph = (struct graph) {
-        .w = 24,
-        .h = 2,
-        .i = -1,
-    };
+    d->graph.i = -1;
+    if(!d->graph.w)
+        d->graph.w = 24;
+    if(!d->graph.h)
+        d->graph.h = 2;
     if(!init(d->v, d->graph.w)) {
         battery_destroy(d);
         return NULL;
