@@ -6,6 +6,8 @@ project "custos"
         "battery.c",
         "date.h",
         "date.c",
+        "fan.h",
+        "fan.c",
         "fs.h",
         "fs.c",
         "graph.c",

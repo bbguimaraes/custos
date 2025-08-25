@@ -24,6 +24,7 @@
 struct window;
 
 typedef uint8_t u8;
+typedef uint16_t u16;
 
 static inline void log_err(
     const char *restrict file, int line, const char *restrict fn,

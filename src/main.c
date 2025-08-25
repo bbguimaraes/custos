@@ -16,6 +16,7 @@
 #include "backlight.h"
 #include "battery.h"
 #include "date.h"
+#include "fan.h"
 #include "fs.h"
 #include "load.h"
 #include "mod.h"
@@ -66,6 +67,12 @@ static struct module modules[] = {{
     .init = date_init,
     .destroy = date_destroy,
     .update = date_update,
+}, {
+    .name = "fan",
+    .lua = fan_lua,
+    .init = fan_init,
+    .destroy = fan_destroy,
+    .update = fan_update,
 }, {
     .name = "fs",
     .lua = fs_lua,
