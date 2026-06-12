@@ -37,11 +37,10 @@ void print_bar(struct window *w, float v) {
     assert(0.0f <= v && v <= 1.0f);
     window_print(w, "[");
     const int WIDTH = 16;
-    int n = (int)(v * (float)WIDTH);
-    for(int i = 0; i != n; ++i)
+    int i = 0;
+    for(const int n = (int)(v * (float)WIDTH); i != n; ++i)
         window_print(w, "=");
-    n = WIDTH - n;
-    for(int i = 0; i != n; ++i)
+    for(const int n = WIDTH; i != n; ++i)
         window_print(w, "-");
     window_print(w, "]");
 }
