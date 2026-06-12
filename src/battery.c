@@ -23,12 +23,12 @@ typedef unsigned long graph_type;
 
 struct battery {
     char *name, *base;
-    graph_type *graph;
     FILE *now, *full, *design, *status;
 };
 
 struct data {
     struct graph graph;
+    graph_type *graph_data;
     struct battery v[];
 };
 
@@ -59,10 +59,8 @@ static struct data *get_batteries(lua_State *L) {
     return ret;
 }
 
-static bool init(struct battery *v, int graph_width) {
+static bool init(struct battery *v) {
     for(; v->name; ++v) {
-        if(!(v->graph = calloc((size_t)graph_width, sizeof(*v->graph))))
-            return LOG_ERRNO("calloc", 0), false;
         char path[CUSTOS_MAX_PATH];
 #define X(name, NAME) \
             if(!( \
@@ -165,12 +163,20 @@ void *battery_init(lua_State *L) {
         d->v->name = strdup("0");
         d->v->base = strdup("/sys/class/power_supply/BAT0");
     }
+    size_t n = 0;
+    for(struct battery *v = d->v; v->name; ++v)
+        ++n;
     d->graph.i = -1;
     if(!d->graph.w)
         d->graph.w = 24;
     if(!d->graph.h)
         d->graph.h = 2;
-    if(!init(d->v, d->graph.w)) {
+    if(!(
+        checked_calloc_p(
+            n * (size_t)d->graph.w,
+            sizeof(*d->graph_data), (void**)&d->graph_data)
+        && init(d->v)
+    )) {
         battery_destroy(d);
         return NULL;
     }
@@ -191,10 +197,10 @@ bool battery_destroy(void *p) {
         X(design, "/" DESIGN)
         X(status, "/" STATUS)
 #undef X
-        free(v->graph);
         free(v->name);
         free(v->base);
     }
+    free(d->graph_data);
     free(d);
     return ret;
 }
@@ -207,18 +213,19 @@ bool battery_update(void *p, size_t counter, struct window *w) {
     counter %= GRAPH_UPDATE_RATE;
     if(!counter && d->graph.i != d->graph.w - 1)
         ++d->graph.i;
-    for(struct battery *v = d->v; v->now; ++v) {
+    graph_type *graph = d->graph_data;
+    for(struct battery *v = d->v; v->now; ++v, graph += d->graph.w) {
         unsigned long now = 0, full = 0, design = 0;
         char status[STATUS_MAX];
         if(!update(v, &now, &full, &design, status))
             return false;
         graph_update(
-            &d->graph, counter, v->graph, &now, sizeof(graph_type), graph_acc);
+            &d->graph, counter, graph, &now, sizeof(graph_type), graph_acc);
         render(
             w, v->name, full,
             (float)now / (float)design,
             (float)full / (float)design,
-            v->graph, &d->graph, status);
+            graph, &d->graph, status);
     }
     return true;
 }

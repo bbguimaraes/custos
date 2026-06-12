@@ -23,11 +23,12 @@ typedef u16 graph_type;
 struct fan {
     FILE *f;
     char *path, *label;
-    graph_type max, *graph;
+    graph_type max;
 };
 
 struct data {
     struct graph graph;
+    graph_type *graph_data;
     struct fan v[];
 };
 
@@ -67,13 +68,9 @@ static struct data *get_inputs(lua_State *L) {
     return ret;
 }
 
-static bool init(struct fan *v, int graph_width) {
+static bool init(struct fan *v) {
     for(; v->path; ++v)
-        if(!(
-            (v->f = fopen(v->path, "r"))
-            && checked_calloc_p(
-                (size_t)graph_width, sizeof(*v->graph), (void**)&v->graph)
-        ))
+        if(!(v->f = fopen(v->path, "r")))
             return false;
     return true;
 }
@@ -176,12 +173,20 @@ void *fan_init(struct lua_State *L) {
     struct data *const d = get_inputs(L);
     if(!d)
         return NULL;
+    size_t n = 0;
+    for(struct fan *v = d->v; v->path; ++v)
+        ++n;
     d->graph.i = -1;
     if(!d->graph.w)
         d->graph.w = 24;
     if(!d->graph.h)
         d->graph.h = 2;
-    if(!init(d->v, d->graph.w)) {
+    if(!(
+        checked_calloc_p(
+            n * (size_t)d->graph.w,
+            sizeof(*d->graph_data), (void**)&d->graph_data)
+        && init(d->v)
+    )) {
         fan_destroy(d);
         return NULL;
     }
@@ -197,8 +202,8 @@ bool fan_destroy(void *p) {
         ret = close_file(v->f, v->path);
         free(v->path);
         free(v->label);
-        free(v->graph);
     }
+    free(d->graph_data);
     free(d);
     return ret;
 }
@@ -211,15 +216,15 @@ bool fan_update(void *p, size_t counter, struct window *w) {
     counter %= GRAPH_UPDATE_RATE;
     if(!counter && d->graph.i != d->graph.w - 1)
         ++d->graph.i;
-    for(struct fan *v = d->v; v->f; ++v) {
+    graph_type *graph = d->graph_data;
+    for(struct fan *v = d->v; v->f; ++v, graph += d->graph.w) {
         u16 speed;
         char status[STATUS_MAX_LEN], level[LEVEL_MAX_LEN];
         if(!update(v, &speed, status, level))
             return false;
         graph_update(
-            &d->graph, counter, v->graph, &speed, sizeof(graph_type),
-            graph_acc);
-        render(w, v->label, status, level, speed, v->max, v->graph, &d->graph);
+            &d->graph, counter, graph, &speed, sizeof(graph_type), graph_acc);
+        render(w, v->label, status, level, speed, v->max, graph, &d->graph);
     }
     return true;
 }
