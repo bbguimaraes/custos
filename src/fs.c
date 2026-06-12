@@ -53,7 +53,7 @@ bool update_fs(struct fs *p) {
     if(statvfs(p->name, &s))
         return LOG_ERRNO("statfs(%s)\n", p->name), false;
     const fsblkcnt_t free = s.f_blocks - s.f_bavail;
-    p->use = (float)free / (float)s.f_blocks * 100.0f;
+    p->use = (float)free / (float)s.f_blocks;
     p->free = (size_t)(free * s.f_bsize);
     p->total = (size_t)(s.f_blocks * s.f_bsize);
     return true;
@@ -84,7 +84,7 @@ bool fs_update(void *d, size_t counter, struct window *w) {
         if(update && !update_fs(v))
             return false;
         window_print(w, "  ");
-        print_bar(w, v->use);
+        print_bar(w, v->use, 0);
         window_print(w, " ");
         print_perc(w, v->use);
         window_print(w, " ");

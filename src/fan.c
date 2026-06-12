@@ -158,7 +158,7 @@ void render(
     u16 speed, u16 max, u16 *graph, const struct graph *g)
 {
     window_print(w, "  ");
-    print_bar(w, max ? 100.0f * (float)speed / (float)max : 0);
+    print_bar(w, max ? (float)speed / (float)max : 0, 0);
     window_printf(w, " %uRPM %s %s %s\n", speed, level, status, label);
     graph_render(w, g, max, graph, graph_idx);
     window_print(w, "\n");

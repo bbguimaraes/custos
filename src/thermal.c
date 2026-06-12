@@ -186,7 +186,7 @@ bool thermal_update(void *d, size_t counter, struct window *w) {
         if(!rewind_and_scan(v->max, "%d", &max))
             return false;
         window_print(w, "  ");
-        print_bar(w, (float)temp / (float)max * 100.0f);
+        print_bar(w, (float)temp / (float)max, 0);
         window_printf(w, " %.1f°C %s\n", (double)temp / 1e3, v->label);
     }
     return true;

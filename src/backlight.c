@@ -109,10 +109,10 @@ bool backlight_update(void *d, size_t counter, struct window *w) {
         if(!rewind_and_scan(v->max, "%d", &max))
             return false;
         window_print(w, "  ");
-        const float b = 100.0f * (float)cur / (float)max;
-        print_bar(w, b);
+        const float b = (float)cur / (float)max;
+        print_bar(w, b, 0);
         window_print(w, " ");
-        print_perc(w, b);
+        print_perc(w, 100.0f * b);
         window_printf(w, " %s\n", v->name);
     }
     return true;

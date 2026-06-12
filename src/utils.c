@@ -34,9 +34,10 @@ void print_size(struct window *w, size_t n) {
 }
 
 void print_bar(struct window *w, float v) {
+    assert(0.0f <= v && v <= 1.0f);
     window_print(w, "[");
     const int WIDTH = 16;
-    int n = (int)(v / 100.0f * (float)WIDTH);
+    int n = (int)(v * (float)WIDTH);
     for(int i = 0; i != n; ++i)
         window_print(w, "=");
     n = WIDTH - n;
