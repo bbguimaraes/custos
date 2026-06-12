@@ -33,15 +33,21 @@ void print_size(struct window *w, size_t n) {
         window_printf(w, "%3.1f%s", d, suffix[i]);
 }
 
-void print_bar(struct window *w, float v) {
+void print_bar(struct window *w, float v, float m) {
     assert(0.0f <= v && v <= 1.0f);
+    assert(0.0f <= m && m <= 1.0f);
+    assert(!m || v <= m);
     window_print(w, "[");
     const int WIDTH = 16;
     int i = 0;
     for(const int n = (int)(v * (float)WIDTH); i != n; ++i)
         window_print(w, "=");
-    for(const int n = WIDTH; i != n; ++i)
-        window_print(w, "-");
+    if(m)
+        for(const int n = (int)(m * (float)WIDTH); i != n; ++i)
+            window_print(w, "-");
+    const char *c = m ? "|" : "-";
+    for(const int n = WIDTH; i != n; ++i, c = "-")
+        window_print(w, c);
     window_print(w, "]");
 }
 

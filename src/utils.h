@@ -44,7 +44,7 @@ static bool checked_calloc_p(size_t n, size_t s, void **p);
 
 void print_perc(struct window *w, float f);
 void print_size(struct window *w, size_t n);
-void print_bar(struct window *w, float v);
+void print_bar(struct window *w, float v, float m);
 
 static inline FILE *open_file(const char *path, const char *mode);
 static inline bool close_file(FILE *f, const char *path);

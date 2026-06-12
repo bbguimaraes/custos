@@ -118,15 +118,13 @@ static bool update(
     return true;
 }
 
-static void render_bar(struct window *w, float charge, float full);
-
 static void render(
     struct window *w, const char *name, unsigned long full_ul,
     float charge, float full, unsigned long *graph, const struct graph *g,
     const char *status)
 {
     window_print(w, "  ");
-    render_bar(w, charge, full);
+    print_bar(w, charge, full);
     window_print(w, " ");
     const float abs = charge / full;
     print_perc(w, abs * 100.0f);
@@ -135,19 +133,6 @@ static void render(
     window_printf(w, " %s %s", status, name);
     graph_render(w, g, full_ul, graph, graph_idx);
     window_print(w, "\n");
-}
-
-static void render_bar(struct window *w, float charge, float full) {
-    window_print(w, "[");
-    const float WIDTH = 16;
-    unsigned int i = 0;
-    for(const unsigned n = (unsigned)(charge * WIDTH); i != n; ++i)
-        window_print(w, "=");
-    for(const unsigned n = (unsigned)(full * WIDTH); i != n; ++i)
-        window_print(w, "-");
-    for(const char *c = "|"; i != WIDTH; ++i, c = "-")
-        window_print(w, c);
-    window_print(w, "]");
 }
 
 void battery_lua(lua_State *L) {
