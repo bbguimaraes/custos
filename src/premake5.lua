@@ -8,6 +8,8 @@ project "custos"
         "date.c",
         "fs.h",
         "fs.c",
+        "graph.c",
+        "graph.h",
         "load.c",
         "load.h",
         "lua.c",
